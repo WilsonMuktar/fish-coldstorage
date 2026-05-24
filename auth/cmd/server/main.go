@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -173,7 +174,8 @@ func readKeyContent(path, envVar string) string {
 	if val == "" {
 		log.Fatalf("read file %s: %v (and env var %s is not set)", path, err, envVar)
 	}
-	return val
+	// Koyeb/Railway may store newlines as literal \n — normalize them
+	return strings.ReplaceAll(val, `\n`, "\n")
 }
 
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) {
