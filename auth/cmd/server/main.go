@@ -34,10 +34,12 @@ func main() {
 	// run migrations inline using SQL files
 	runMigrations(context.Background(), pool)
 
-	// load JWT keys
-	privKey := loadPrivateKey(cfg.JWTPrivateKeyPath)
-	pubKey := loadPublicKey(cfg.JWTPublicKeyPath)
-	pubKeyPEM := readFile(cfg.JWTPublicKeyPath)
+	// load JWT keys — from file if present, otherwise from env vars
+	privPEM := readKeyContent(cfg.JWTPrivateKeyPath, "JWT_PRIVATE_KEY")
+	pubPEM := readKeyContent(cfg.JWTPublicKeyPath, "JWT_PUBLIC_KEY")
+	privKey := parsePrivateKey(privPEM)
+	pubKey := parsePublicKey(pubPEM)
+	pubKeyPEM := pubPEM
 
 	// repos
 	peopleRepo := repo.NewPeopleRepo(pool)
@@ -128,11 +130,10 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func loadPrivateKey(path string) *rsa.PrivateKey {
-	b := []byte(readFile(path))
-	block, _ := pem.Decode(b)
+func parsePrivateKey(pemContent string) *rsa.PrivateKey {
+	block, _ := pem.Decode([]byte(pemContent))
 	if block == nil {
-		log.Fatalf("failed to decode private key PEM from %s", path)
+		log.Fatalf("failed to decode private key PEM")
 	}
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
@@ -141,11 +142,10 @@ func loadPrivateKey(path string) *rsa.PrivateKey {
 	return key
 }
 
-func loadPublicKey(path string) *rsa.PublicKey {
-	b := []byte(readFile(path))
-	block, _ := pem.Decode(b)
+func parsePublicKey(pemContent string) *rsa.PublicKey {
+	block, _ := pem.Decode([]byte(pemContent))
 	if block == nil {
-		log.Fatalf("failed to decode public key PEM from %s", path)
+		log.Fatalf("failed to decode public key PEM")
 	}
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
@@ -160,6 +160,20 @@ func readFile(path string) string {
 		log.Fatalf("read file %s: %v", path, err)
 	}
 	return string(b)
+}
+
+// readKeyContent reads PEM content from a file path, falling back to an env var
+// when the file doesn't exist. envVar should contain the raw PEM text.
+func readKeyContent(path, envVar string) string {
+	b, err := os.ReadFile(path)
+	if err == nil {
+		return string(b)
+	}
+	val := os.Getenv(envVar)
+	if val == "" {
+		log.Fatalf("read file %s: %v (and env var %s is not set)", path, err, envVar)
+	}
+	return val
 }
 
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) {
