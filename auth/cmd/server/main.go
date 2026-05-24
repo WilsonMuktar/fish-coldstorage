@@ -174,8 +174,67 @@ func readKeyContent(path, envVar string) string {
 	if val == "" {
 		log.Fatalf("read file %s: %v (and env var %s is not set)", path, err, envVar)
 	}
-	// Koyeb/Railway may store newlines as literal \n — normalize them
-	return strings.ReplaceAll(val, `\n`, "\n")
+	return normalizePEM(val)
+}
+
+// normalizePEM handles PEM content that may have literal \n or spaces instead
+// of real newlines (common when pasting into Koyeb/Railway env var fields).
+func normalizePEM(raw string) string {
+	// Handle literal \n first
+	raw = strings.ReplaceAll(raw, `\n`, "\n")
+	raw = strings.TrimSpace(raw)
+	// Already has real newlines — use as-is
+	if strings.Contains(raw, "\n") {
+		return raw
+	}
+	// Space-separated — reconstruct proper PEM from scratch.
+	// Find header: -----BEGIN ...-----
+	start := strings.Index(raw, "-----")
+	if start == -1 {
+		return raw
+	}
+	endOfHeader := strings.Index(raw[start+5:], "-----")
+	if endOfHeader == -1 {
+		return raw
+	}
+	endOfHeader = start + 5 + endOfHeader + 5
+	header := raw[start:endOfHeader]
+
+	// Find footer: -----END ...-----
+	endStart := strings.LastIndex(raw, "-----END")
+	if endStart == -1 {
+		return raw
+	}
+	endOfFooter := strings.Index(raw[endStart+5:], "-----")
+	if endOfFooter == -1 {
+		return raw
+	}
+	footer := raw[endStart : endStart+5+endOfFooter+5]
+
+	// Strip all whitespace from the base64 body
+	body := raw[endOfHeader:endStart]
+	body = strings.Map(func(r rune) rune {
+		if r == ' ' || r == '\t' || r == '\r' || r == '\n' {
+			return -1
+		}
+		return r
+	}, body)
+
+	// Reassemble with 64-char lines
+	var sb strings.Builder
+	sb.WriteString(header)
+	sb.WriteByte('\n')
+	for len(body) > 64 {
+		sb.WriteString(body[:64])
+		sb.WriteByte('\n')
+		body = body[64:]
+	}
+	if body != "" {
+		sb.WriteString(body)
+		sb.WriteByte('\n')
+	}
+	sb.WriteString(footer)
+	return sb.String()
 }
 
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) {
