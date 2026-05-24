@@ -21,12 +21,13 @@ type Config struct {
 func Load() *Config {
 	_ = godotenv.Load()
 
-	host := getEnv("POSTGRES_HOST", "localhost")
-	port := getEnv("POSTGRES_PORT", "5432")
-	db   := getEnv("POSTGRES_DB", "auth_db")
-	user := getEnv("POSTGRES_USER", "authuser")
-	pass := getEnv("POSTGRES_PASSWORD", "changeme")
-	dsn  := "postgres://" + user + ":" + pass + "@" + host + ":" + port + "/" + db + "?sslmode=disable"
+	host    := getEnv("POSTGRES_HOST", "localhost")
+	port    := getEnv("POSTGRES_PORT", "5432")
+	db      := getEnv("POSTGRES_DB", "auth_db")
+	user    := getEnv("POSTGRES_USER", "authuser")
+	pass    := getEnv("POSTGRES_PASSWORD", "changeme")
+	sslmode := getEnv("POSTGRES_SSLMODE", "disable")
+	dsn     := "postgres://" + user + ":" + pass + "@" + host + ":" + port + "/" + db + "?sslmode=" + sslmode
 
 	accessTTL, _ := strconv.Atoi(getEnv("JWT_ACCESS_TOKEN_TTL", "900"))
 	refreshTTL, _ := strconv.Atoi(getEnv("JWT_REFRESH_TOKEN_TTL", "2592000"))
