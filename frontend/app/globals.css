@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 33% 96%;
+    --foreground: 215 35% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 35% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 35% 12%;
+    --primary: 210 82% 30%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 185 58% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 22% 92%;
+    --muted-foreground: 215 18% 46%;
+    --accent: 38 94% 54%;
+    --accent-foreground: 215 35% 12%;
+    --destructive: 0 84% 58%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 28% 86%;
+    --input: 210 28% 86%;
+    --ring: 210 82% 30%;
+    --radius: 0.75rem;
+    --sidebar-bg: 215 55% 10%;
+    --sidebar-text: 210 30% 92%;
+    --sidebar-muted: 215 25% 48%;
+    --sidebar-active: 185 58% 40%;
+    --sidebar-hover: 215 45% 18%;
+    --sidebar-border: 215 40% 16%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply rounded-full bg-border; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+}
+
+/* Wave animation for sidebar */
+@keyframes wave-slow {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-20px); }
+}
+
+.wave-animate { animation: wave-slow 8s ease-in-out infinite; }
