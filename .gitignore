@@ -1,0 +1,33 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+env.sh
+secrets/*.pem
+secrets/*.key
+
+# Go binaries
+bin/
+*/bin/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# Data & uploads
+data/receipts/
+*/data/receipts/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
