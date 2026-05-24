@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  postgres-fish:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fishstorage
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-fish:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      postgres-fish:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DB_HOST: postgres-fish
+      DB_PORT: 5432
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./data:/app/data
+      - ./secrets:/app/secrets:ro
+      - ./migrations:/app/migrations:ro
+
+volumes:
+  pgdata-fish:
