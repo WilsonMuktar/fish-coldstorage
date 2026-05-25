@@ -579,8 +579,18 @@ export default function ReviewPage() {
         const err = await res.json().catch(() => ({ error: 'Gagal merevisi' }))
         throw new Error(err.error)
       }
-      // Locally flip status so form becomes editable
-      setData(prev => prev ? { ...prev, status: 'pending' } : prev)
+      // Re-fetch from server so confirmed_data (now NULL) and image_url are fresh
+      const refreshRes = await fetch(`${BASE_URL}/v1/reviews/${token}`)
+      if (refreshRes.ok) {
+        const refreshed: ReviewData = await refreshRes.json()
+        if (!refreshed.image_url && refreshed.image_path) {
+          refreshed.image_url = `${BASE_URL}/data/${refreshed.image_path}`
+        }
+        setData({ ...refreshed, status: 'pending' })
+        populateForm({ ...refreshed, status: 'pending' })
+      } else {
+        setData(prev => prev ? { ...prev, status: 'pending' } : prev)
+      }
       setIsRevising(true)
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Terjadi kesalahan')
@@ -744,7 +754,7 @@ export default function ReviewPage() {
   const receiptTypeLabels: Record<string, string> = {
     bon_penjualan: 'Bon Penjualan',
     bon_pengeluaran: 'Bon Pengeluaran',
-    timbangan_ikan_basah: 'Timbangan Ikan Basah',
+    timbangan_ikan_basah: 'Timbangan Ikan',
     timbangan_sortir: 'Timbangan Sortir',
     invoice: 'Invoice',
     beli_ikan: 'Beli Ikan (HPP)',
