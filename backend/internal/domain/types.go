@@ -238,15 +238,16 @@ type TitipanTransaction struct {
 // ─── Employees ────────────────────────────────────────────────────────────────
 
 type Employee struct {
-	ID         uuid.UUID  `json:"id"`
-	PersonID   *uuid.UUID `json:"person_id,omitempty"`
-	Name       string     `json:"name"`
-	Position   string     `json:"position"`
-	Phone      string     `json:"phone,omitempty"`
-	DailySalary float64   `json:"daily_salary"`
-	IsActive   bool       `json:"is_active"`
-	HiredAt    *time.Time `json:"hired_at,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID          uuid.UUID  `json:"id"`
+	PersonID    *uuid.UUID `json:"person_id,omitempty"`
+	Code        int        `json:"code"`
+	Name        string     `json:"name"`
+	Position    string     `json:"position"`
+	Phone       string     `json:"phone,omitempty"`
+	DailySalary float64    `json:"daily_salary"`
+	IsActive    bool       `json:"is_active"`
+	HiredAt     *time.Time `json:"hired_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 type AttendanceRecord struct {

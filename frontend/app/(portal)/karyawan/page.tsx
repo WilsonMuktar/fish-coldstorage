@@ -27,7 +27,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { formatDate } from '@/lib/formatters'
 import { Plus, Loader2, QrCode, Printer } from 'lucide-react'
 import { toast } from 'sonner'
-import { QRCodeSVG } from 'qrcode.react'
+import Barcode from 'react-barcode'
 
 export default function KaryawanPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -234,15 +234,19 @@ export default function KaryawanPage() {
         </CardContent>
       </Card>
 
-      {/* QR detail dialog */}
+      {/* Barcode detail dialog */}
       <Dialog open={!!qrEmployee} onOpenChange={(o) => !o && setQrEmployee(null)}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>QR Absensi — {qrEmployee?.name}</DialogTitle>
+            <DialogTitle>Barcode Absensi — {qrEmployee?.name}</DialogTitle>
           </DialogHeader>
           {qrEmployee && (
             <div className="flex flex-col items-center gap-3 py-2">
-              <QRCodeSVG value={qrEmployee.id} size={200} level="M" />
+              {qrEmployee.code ? (
+                <Barcode value={String(qrEmployee.code)} width={2} height={80} fontSize={14} />
+              ) : (
+                <p className="text-sm text-muted-foreground">Kode belum tersedia, refresh halaman</p>
+              )}
               <p className="text-sm text-muted-foreground text-center">{qrEmployee.position}</p>
               <Button
                 variant="outline"
@@ -251,7 +255,7 @@ export default function KaryawanPage() {
                 onClick={() => {
                   const w = window.open('', '_blank')
                   if (!w) return
-                  const svg = document.querySelector('[data-qr-dialog] svg')?.outerHTML || ''
+                  const svg = document.querySelector('#barcode-dialog svg')?.outerHTML || ''
                   w.document.write(`<html><body style="display:flex;flex-direction:column;align-items:center;padding:20px;font-family:sans-serif">
                     ${svg}
                     <p style="font-weight:bold;margin-top:10px">${qrEmployee.name}</p>
@@ -265,14 +269,17 @@ export default function KaryawanPage() {
               </Button>
             </div>
           )}
+          <div id="barcode-dialog" className="hidden">
+            {qrEmployee?.code && <Barcode value={String(qrEmployee.code)} />}
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Hidden print grid for all QR codes */}
+      {/* Hidden print grid for all barcodes */}
       <div ref={printRef} className="hidden">
-        {active.map((emp) => (
+        {active.filter((e) => e.code).map((emp) => (
           <div key={emp.id} className="item">
-            <QRCodeSVG value={emp.id} size={120} level="M" />
+            <Barcode value={String(emp.code)} width={1.5} height={60} fontSize={12} />
             <p className="name">{emp.name}</p>
             <p className="pos">{emp.position}</p>
           </div>

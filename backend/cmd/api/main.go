@@ -207,6 +207,7 @@ func main() {
 		// Absensi
 		r.Get("/v1/absen", employeeH.ListAttendance)
 		r.Post("/v1/absen", employeeH.BulkAttendance)
+		r.Post("/v1/absen/scan", employeeH.ScanAttendance)
 
 		// Invoice
 		r.Get("/v1/invoice", invoiceH.List)
@@ -280,6 +281,7 @@ func runMigrations(pool *pgxpool.Pool) error {
 		"migrations/000008_fish_type_canonical.up.sql",
 		"migrations/000009_sorting_receipt.up.sql",
 		"migrations/000010_attendance_shift.up.sql",
+		"migrations/000011_employee_code.up.sql",
 	} {
 		sql, err := os.ReadFile(f)
 		if err != nil {

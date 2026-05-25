@@ -208,6 +208,10 @@ export const employeeAPI = {
     request<{ data: unknown[] }>(`/v1/absen?from=${from}&to=${to}`),
   bulkAttendance: (data: unknown) =>
     request<unknown>('/v1/absen', { method: 'POST', body: JSON.stringify(data) }),
+  scanAttendance: (code: number, date?: string) =>
+    request<{ employee_id: string; employee_name: string; code: number; shift: number; date: string }>(
+      '/v1/absen/scan', { method: 'POST', body: JSON.stringify({ code, date }) }
+    ),
 }
 
 // Invoices

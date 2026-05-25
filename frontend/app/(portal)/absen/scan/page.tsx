@@ -1,19 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { Html5Qrcode } from 'html5-qrcode'
+import { useEffect, useRef, useState } from 'react'
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { employeeAPI } from '@/lib/api'
-import { Employee } from '@/types/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, CheckCircle2, XCircle, Camera } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, Camera, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { id } from 'date-fns/locale'
 
 type ScanResult = {
-  employee: Employee
-  shift: 1 | 2
+  name: string
+  shift: number
   time: string
   status: 'success' | 'error'
   message: string
@@ -24,80 +23,64 @@ function getCurrentShift(): 1 | 2 {
 }
 
 export default function ScanAbsenPage() {
-  const [employees, setEmployees] = useState<Map<string, Employee>>(new Map())
   const [scanning, setScanning] = useState(false)
   const [results, setResults] = useState<ScanResult[]>([])
-  const [lastScan, setLastScan] = useState<string | null>(null)
+  const [lastResult, setLastResult] = useState<ScanResult | null>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const cooldownRef = useRef<Set<string>>(new Set())
   const shift = getCurrentShift()
-  const today = format(new Date(), 'yyyy-MM-dd')
 
-  useEffect(() => {
-    employeeAPI.getAll()
-      .then((res) => {
-        const data = (res as { data: Employee[] }).data || []
-        setEmployees(new Map(data.filter((e) => e.is_active).map((e) => [e.id, e])))
-      })
-      .catch(() => {})
-  }, [])
+  const onScan = async (decodedText: string) => {
+    const raw = decodedText.trim()
+    if (cooldownRef.current.has(raw)) return
+    cooldownRef.current.add(raw)
+    setTimeout(() => cooldownRef.current.delete(raw), 4000)
 
-  const onScan = useCallback(async (decodedText: string) => {
-    const empId = decodedText.trim()
-    if (cooldownRef.current.has(empId)) return
-    cooldownRef.current.add(empId)
-    setTimeout(() => cooldownRef.current.delete(empId), 3000)
-
-    const emp = employees.get(empId)
+    const code = parseInt(raw)
     const time = format(new Date(), 'HH:mm:ss')
 
-    if (!emp) {
-      setLastScan(empId)
-      setResults((prev) => [{
-        employee: { id: empId, name: 'Tidak dikenal', position: '' } as Employee,
-        shift,
-        time,
-        status: 'error',
-        message: 'ID karyawan tidak ditemukan',
-      }, ...prev.slice(0, 9)])
+    if (isNaN(code)) {
+      const r: ScanResult = { name: raw, shift, time, status: 'error', message: 'Bukan kode karyawan yang valid' }
+      setLastResult(r)
+      setResults((prev) => [r, ...prev.slice(0, 9)])
       return
     }
 
     try {
-      await employeeAPI.bulkAttendance([{
-        employee_id: emp.id,
-        attend_date: today,
-        shift,
-        present: true,
-        notes: '',
-      }])
-      setLastScan(empId)
-      setResults((prev) => [{
-        employee: emp,
-        shift,
+      const res = await employeeAPI.scanAttendance(code)
+      const r: ScanResult = {
+        name: res.employee_name,
+        shift: res.shift,
         time,
         status: 'success',
-        message: `Shift ${shift} tercatat — ${today}`,
-      }, ...prev.slice(0, 9)])
+        message: `Shift ${res.shift} (${res.shift === 1 ? 'Pagi' : 'Sore'}) — ${res.date}`,
+      }
+      setLastResult(r)
+      setResults((prev) => [r, ...prev.slice(0, 9)])
     } catch {
-      setResults((prev) => [{
-        employee: emp,
-        shift,
-        time,
-        status: 'error',
-        message: 'Gagal menyimpan, coba lagi',
-      }, ...prev.slice(0, 9)])
+      const r: ScanResult = { name: `Kode ${code}`, shift, time, status: 'error', message: 'Karyawan tidak ditemukan' }
+      setLastResult(r)
+      setResults((prev) => [r, ...prev.slice(0, 9)])
     }
-  }, [employees, shift, today])
+  }
 
   const startScanner = async () => {
     if (scannerRef.current) return
-    const scanner = new Html5Qrcode('qr-reader')
+    const scanner = new Html5Qrcode('qr-reader', { verbose: false })
     scannerRef.current = scanner
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        {
+          fps: 15,
+          qrbox: { width: 280, height: 120 },
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.QR_CODE,
+          ],
+        },
         onScan,
         () => {}
       )
@@ -110,7 +93,7 @@ export default function ScanAbsenPage() {
 
   const stopScanner = async () => {
     if (scannerRef.current) {
-      await scannerRef.current.stop()
+      await scannerRef.current.stop().catch(() => {})
       scannerRef.current = null
     }
     setScanning(false)
@@ -119,6 +102,13 @@ export default function ScanAbsenPage() {
   useEffect(() => {
     return () => { scannerRef.current?.stop().catch(() => {}) }
   }, [])
+
+  // Auto-clear last result banner after 3s
+  useEffect(() => {
+    if (!lastResult) return
+    const t = setTimeout(() => setLastResult(null), 3000)
+    return () => clearTimeout(t)
+  }, [lastResult])
 
   return (
     <div className="max-w-md mx-auto space-y-4">
@@ -139,30 +129,46 @@ export default function ScanAbsenPage() {
         </div>
       </div>
 
-      {/* Camera viewfinder */}
+      {/* Last scan banner */}
+      {lastResult && (
+        <div className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-all ${
+          lastResult.status === 'success'
+            ? 'bg-green-100 border border-green-300'
+            : 'bg-red-100 border border-red-300'
+        }`}>
+          {lastResult.status === 'success'
+            ? <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />
+            : <XCircle className="h-6 w-6 text-red-500 shrink-0" />}
+          <div>
+            <p className="font-semibold">{lastResult.name}</p>
+            <p className="text-sm text-muted-foreground">{lastResult.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Camera */}
       <Card>
         <CardContent className="p-4 space-y-3">
           <div
             id="qr-reader"
             className="w-full rounded-lg overflow-hidden bg-black"
-            style={{ minHeight: scanning ? 300 : 0 }}
+            style={{ minHeight: scanning ? 240 : 0 }}
           />
-          {!scanning && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <Camera className="h-12 w-12 text-muted-foreground" />
+          {!scanning ? (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <Camera className="h-10 w-10 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center">
-                Arahkan kamera ke QR code karyawan
+                Arahkan kamera ke barcode karyawan
               </p>
               <Button onClick={startScanner} className="gap-2">
                 <Camera className="h-4 w-4" /> Buka Kamera
               </Button>
             </div>
-          )}
-          {scanning && (
+          ) : (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm">Kamera aktif</span>
+                <span className="text-sm">Menunggu scan...</span>
               </div>
               <Button variant="outline" size="sm" onClick={stopScanner}>Tutup</Button>
             </div>
@@ -170,10 +176,12 @@ export default function ScanAbsenPage() {
         </CardContent>
       </Card>
 
-      {/* Recent scans */}
+      {/* History */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">Riwayat scan</p>
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <UserCheck className="h-4 w-4" /> Riwayat scan hari ini
+          </div>
           {results.map((r, i) => (
             <div
               key={i}
@@ -182,10 +190,10 @@ export default function ScanAbsenPage() {
               }`}
             >
               {r.status === 'success'
-                ? <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                : <XCircle className="h-5 w-5 text-red-500 shrink-0" />}
+                ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                : <XCircle className="h-4 w-4 text-red-500 shrink-0" />}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{r.employee.name}</p>
+                <p className="font-medium text-sm truncate">{r.name}</p>
                 <p className="text-xs text-muted-foreground">{r.message}</p>
               </div>
               <span className="text-xs text-muted-foreground shrink-0">{r.time}</span>

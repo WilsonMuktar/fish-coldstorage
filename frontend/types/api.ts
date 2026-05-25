@@ -148,6 +148,7 @@ export interface TitipanTransaction {
 
 export interface Employee {
   id: string
+  code: number
   name: string
   phone?: string
   position: string

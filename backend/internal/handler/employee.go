@@ -124,3 +124,54 @@ func (h *EmployeeHandler) BulkAttendance(w http.ResponseWriter, r *http.Request)
 	}
 	writeJSON(w, http.StatusOK, map[string]int{"saved": len(recs)})
 }
+
+// POST /v1/absen/scan — scan barcode code, auto-detect shift by time
+func (h *EmployeeHandler) ScanAttendance(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Code int    `json:"code"`
+		Date string `json:"date"` // optional, defaults to today
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Code == 0 {
+		writeError(w, http.StatusBadRequest, "invalid body, need {code: <number>}")
+		return
+	}
+
+	emp, err := h.repo.GetByCode(r.Context(), body.Code)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "karyawan tidak ditemukan")
+		return
+	}
+
+	now := time.Now()
+	date := now.Truncate(24 * time.Hour)
+	if body.Date != "" {
+		if d, err := time.Parse("2006-01-02", body.Date); err == nil {
+			date = d
+		}
+	}
+
+	shift := 1
+	if now.Hour() >= 13 {
+		shift = 2
+	}
+
+	rec := domain.AttendanceRecord{
+		ID:         uuid.New(),
+		EmployeeID: emp.ID,
+		AttendDate: date,
+		Shift:      shift,
+		Present:    true,
+	}
+	if err := h.repo.UpsertAttendance(r.Context(), []domain.AttendanceRecord{rec}); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"employee_id":   emp.ID,
+		"employee_name": emp.Name,
+		"code":          emp.Code,
+		"shift":         shift,
+		"date":          date.Format("2006-01-02"),
+	})
+}
