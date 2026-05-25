@@ -351,7 +351,7 @@ export default function KaryawanPage() {
             </div>
           )}
           <div id="barcode-dialog" className="hidden">
-            {qrEmployee?.code > 0 && <Barcode value={String(qrEmployee.code)} />}
+            {(qrEmployee?.code ?? 0) > 0 && <Barcode value={String(qrEmployee!.code)} />}
           </div>
         </DialogContent>
       </Dialog>
