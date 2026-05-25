@@ -102,7 +102,11 @@ func (s *ReviewService) GetForReview(ctx context.Context, token string) (*domain
 		return nil, fmt.Errorf("receipt not found")
 	}
 	if rec.ImagePath != "" {
-		rec.ImageURL = fmt.Sprintf("%s/data/%s", s.apiURL, rec.ImagePath)
+		if len(rec.ImagePath) > 4 && rec.ImagePath[:4] == "http" {
+			rec.ImageURL = rec.ImagePath
+		} else {
+			rec.ImageURL = fmt.Sprintf("%s/data/%s", s.apiURL, rec.ImagePath)
+		}
 	}
 	return rec, nil
 }
