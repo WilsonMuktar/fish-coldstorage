@@ -23,7 +23,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatIDR, formatDate } from '@/lib/formatters'
-import { CheckCircle, XCircle, ZoomIn, AlertTriangle, Building2, Plus, Upload } from 'lucide-react'
+import { CheckCircle, XCircle, ZoomIn, AlertTriangle, Building2, Plus, Upload, ArrowLeft } from 'lucide-react'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
@@ -729,8 +729,8 @@ export default function ReviewPage() {
               ? 'Data telah disimpan ke sistem. Terima kasih!'
               : 'Bon telah ditolak. Pengirim akan mendapat notifikasi.'}
           </p>
-          <Button className="mt-6" onClick={() => router.push('/')}>
-            Kembali ke Beranda
+          <Button className="mt-6" onClick={() => router.push('/reviews')}>
+            Kembali ke Daftar Review
           </Button>
         </div>
       </div>
@@ -760,9 +760,10 @@ export default function ReviewPage() {
       <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary">
-              <Building2 className="h-4 w-4 text-white" />
-            </div>
+            <Button variant="ghost" size="sm" className="gap-1.5 px-2" onClick={() => router.push('/reviews')}>
+              <ArrowLeft className="h-4 w-4" /> Kembali
+            </Button>
+            <div className="h-5 w-px bg-border" />
             <div>
               <p className="text-sm font-semibold">Review Bon</p>
               <p className="text-xs text-gray-500">

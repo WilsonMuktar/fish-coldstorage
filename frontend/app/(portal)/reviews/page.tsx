@@ -5,7 +5,8 @@ import { reviewAPI } from '@/lib/api'
 import { Receipt } from '@/types/api'
 import { Button } from '@/components/ui/button'
 import { formatDateTime, timeAgo } from '@/lib/formatters'
-import { ExternalLink, RefreshCw, Clock, Inbox } from 'lucide-react'
+import { RefreshCw, Clock, Inbox, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 export default function PendingReviewPage() {
+  const router = useRouter()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -96,11 +98,9 @@ export default function PendingReviewPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <a href={`/review/${r.review_token}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" className="gap-1 h-7 text-xs">
-                          <ExternalLink className="h-3 w-3" /> Review
-                        </Button>
-                      </a>
+                      <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => router.push(`/review/${r.review_token}`)}>
+                        <ArrowRight className="h-3 w-3" /> Review
+                      </Button>
                     </td>
                   </tr>
                 )
