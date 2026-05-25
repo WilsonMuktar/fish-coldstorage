@@ -103,12 +103,18 @@ export default function AbsenPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Absensi Karyawan</h2>
-          <p className="text-sm text-muted-foreground">Input absensi harian — 2 shift per hari</p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Absensi Karyawan</h2>
+            <p className="text-sm text-muted-foreground">Input absensi harian — 2 shift per hari</p>
+          </div>
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan
+          </Button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/absen/scan">
             <Button variant="outline" size="sm" className="gap-2">
               <ScanLine className="h-4 w-4" /> Scan QR
@@ -126,10 +132,6 @@ export default function AbsenPage() {
               className="w-40"
             />
           </div>
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Simpan
-          </Button>
         </div>
       </div>
 
