@@ -1,11 +1,11 @@
-FROM golang:1.22-alpine AS build-backend
+FROM golang:1.24-alpine AS build-backend
 WORKDIR /app/backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -o bin/api ./cmd/api
 
-FROM golang:1.22-alpine AS build-auth
+FROM golang:1.24-alpine AS build-auth
 WORKDIR /app/auth
 COPY auth/go.mod auth/go.sum ./
 RUN go mod download
