@@ -23,7 +23,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatIDR, formatDate } from '@/lib/formatters'
-import { CheckCircle, XCircle, ZoomIn, AlertTriangle, Building2, Plus } from 'lucide-react'
+import { CheckCircle, XCircle, ZoomIn, AlertTriangle, Building2, Plus, Upload } from 'lucide-react'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
@@ -136,6 +136,9 @@ export default function ReviewPage() {
 
   // Image zoom
   const [imgZoom, setImgZoom] = useState(false)
+
+  // Photo upload
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   // Reject dialog
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -582,6 +585,28 @@ export default function ReviewPage() {
     }
   }
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !data) return
+    e.target.value = ''
+    setUploadingPhoto(true)
+    try {
+      const form = new FormData()
+      form.append('photo', file)
+      const res = await fetch(`${BASE_URL}/v1/reviews/${token}/photo`, {
+        method: 'POST',
+        body: form,
+      })
+      if (!res.ok) throw new Error('Upload gagal')
+      const result = await res.json() as { image_url: string }
+      setData((prev) => prev ? { ...prev, image_url: result.image_url } : prev)
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Upload gagal')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   const handleReject = async () => {
     if (!requireLogin('reject')) return
     if (!data || !rejectReason.trim()) return
@@ -867,6 +892,15 @@ export default function ReviewPage() {
                 <ZoomIn className="h-4 w-4 text-white" />
               </div>
             </div>
+            {(isRevising || data.status === 'pending') && (
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 py-2 text-sm text-gray-600 hover:bg-gray-100">
+                {uploadingPhoto
+                  ? <span>Mengunggah...</span>
+                  : <><Upload className="h-4 w-4" /><span>Ganti Foto Bon</span></>
+                }
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto} onChange={handlePhotoUpload} />
+              </label>
+            )}
           </div>
 
           {/* Right: Form */}

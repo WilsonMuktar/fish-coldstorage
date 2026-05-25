@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// Handlers
-	reviewH := handler.NewReviewHandler(reviewSvc, auditLog)
+	reviewH := handler.NewReviewHandler(reviewSvc, receiptRepo, r2, auditLog)
 	fishH := handler.NewFishHandler(fishRepo, r2, auditLog)
 	sortingH := handler.NewSortingHandler(sortingRepo, fishRepo, auditLog)
 	auditH := handler.NewAuditHandler(auditLog)
@@ -141,6 +141,7 @@ func main() {
 
 	// Bot submission endpoint — protected by bot token or open (bot is on local network)
 	r.Post("/v1/reviews/submit", reviewH.Submit)
+	r.Post("/v1/reviews/{token}/photo", reviewH.UploadPhoto)
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {

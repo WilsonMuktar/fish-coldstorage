@@ -153,3 +153,8 @@ func (r *ReceiptRepo) MarkTokenUsed(ctx context.Context, token string) error {
 	_, err := r.db.Exec(ctx, `UPDATE receipts SET review_token_used=true WHERE review_token=$1`, token)
 	return err
 }
+
+func (r *ReceiptRepo) UpdateImagePath(ctx context.Context, token, imagePath string) error {
+	_, err := r.db.Exec(ctx, `UPDATE receipts SET image_path=$1 WHERE review_token=$2`, imagePath, token)
+	return err
+}

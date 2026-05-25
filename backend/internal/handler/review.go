@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -9,16 +10,20 @@ import (
 	"github.com/samudera/fish-coldstorage/internal/audit"
 	"github.com/samudera/fish-coldstorage/internal/domain"
 	"github.com/samudera/fish-coldstorage/internal/middleware"
+	"github.com/samudera/fish-coldstorage/internal/repo"
 	"github.com/samudera/fish-coldstorage/internal/service"
+	"github.com/samudera/fish-coldstorage/internal/storage"
 )
 
 type ReviewHandler struct {
-	svc   *service.ReviewService
-	audit *audit.Log
+	svc         *service.ReviewService
+	receiptRepo *repo.ReceiptRepo
+	r2          *storage.R2Client
+	audit       *audit.Log
 }
 
-func NewReviewHandler(svc *service.ReviewService, auditLog *audit.Log) *ReviewHandler {
-	return &ReviewHandler{svc: svc, audit: auditLog}
+func NewReviewHandler(svc *service.ReviewService, receiptRepo *repo.ReceiptRepo, r2 *storage.R2Client, auditLog *audit.Log) *ReviewHandler {
+	return &ReviewHandler{svc: svc, receiptRepo: receiptRepo, r2: r2, audit: auditLog}
 }
 
 // POST /v1/reviews/submit — called by the Telegram bot
@@ -131,4 +136,42 @@ func (h *ReviewHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, domain.ListResponse{Data: recs, Total: len(recs), Page: 1, Limit: limit})
+}
+
+// POST /v1/reviews/{token}/photo — replace receipt image (multipart: field "photo")
+func (h *ReviewHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+	rec, err := h.receiptRepo.GetByToken(r.Context(), token)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "receipt not found")
+		return
+	}
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large (max 10MB)")
+		return
+	}
+	file, header, err := r.FormFile("photo")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "photo field required")
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	key := "receipts/" + rec.ID.String() + "_" + header.Filename
+	imageURL, err := h.r2.Replace(r.Context(), rec.ImagePath, key, data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
+		return
+	}
+	if err := h.receiptRepo.UpdateImagePath(r.Context(), token, imageURL); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.audit.Record(r.Context(), r, "receipt", "upload_photo", rec.ID, map[string]string{"token": token})
+	writeJSON(w, http.StatusOK, map[string]string{"image_url": imageURL})
 }
