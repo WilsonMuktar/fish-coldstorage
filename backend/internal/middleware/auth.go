@@ -12,6 +12,28 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+func normalizePEM(raw string) string {
+	raw = strings.ReplaceAll(raw, `\n`, "\n")
+	raw = strings.TrimSpace(raw)
+	if strings.Contains(raw, "\n") {
+		return raw
+	}
+	// Single-line: strip header/footer, clean body, reassemble
+	raw = strings.ReplaceAll(raw, "-----BEGIN PUBLIC KEY-----", "")
+	raw = strings.ReplaceAll(raw, "-----END PUBLIC KEY-----", "")
+	raw = strings.ReplaceAll(raw, " ", "")
+	body := strings.TrimSpace(raw)
+	var lines []string
+	for len(body) > 64 {
+		lines = append(lines, body[:64])
+		body = body[64:]
+	}
+	if len(body) > 0 {
+		lines = append(lines, body)
+	}
+	return "-----BEGIN PUBLIC KEY-----\n" + strings.Join(lines, "\n") + "\n-----END PUBLIC KEY-----\n"
+}
+
 type contextKey string
 
 const claimsKey contextKey = "claims"
@@ -29,11 +51,15 @@ type Claims struct {
 var publicKey *rsa.PublicKey
 
 func LoadPublicKey(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
+	var pemData []byte
+	if data, err := os.ReadFile(path); err == nil {
+		pemData = data
+	} else if envKey := os.Getenv("AUTH_PUBLIC_KEY"); envKey != "" {
+		pemData = []byte(normalizePEM(envKey))
+	} else {
 		return err
 	}
-	key, err := jwt.ParseRSAPublicKeyFromPEM(data)
+	key, err := jwt.ParseRSAPublicKeyFromPEM(pemData)
 	if err != nil {
 		return err
 	}
