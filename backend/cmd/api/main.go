@@ -107,6 +107,12 @@ func main() {
 	}
 	authTarget, _ := url.Parse(authServiceURL)
 	authProxy := httputil.NewSingleHostReverseProxy(authTarget)
+	authProxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Del("Access-Control-Allow-Origin")
+		resp.Header.Del("Access-Control-Allow-Methods")
+		resp.Header.Del("Access-Control-Allow-Headers")
+		return nil
+	}
 	r.Handle("/v1/auth/*", authProxy)
 
 	// Health
