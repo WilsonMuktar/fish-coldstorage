@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { employeeAPI } from '@/lib/api'
 import { Employee, Attendance } from '@/types/api'
 import { Card, CardContent } from '@/components/ui/card'
@@ -8,9 +9,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Loader2, Save, ScanLine } from 'lucide-react'
 import { toast } from 'sonner'
-import Link from 'next/link'
 
 interface ShiftEntry {
   employee_id: string
@@ -21,11 +28,38 @@ interface ShiftEntry {
 }
 
 export default function AbsenPage() {
+  const router = useRouter()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [entries, setEntries] = useState<ShiftEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  const [isDirty, setIsDirty] = useState(false)
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
+  // stores the action to run after user confirms save/discard
+  const pendingActionRef = useRef<(() => void) | null>(null)
+
+  // Block browser refresh/close when dirty
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  // Guard in-app navigation: show dialog if dirty, otherwise run immediately
+  const guardAction = (action: () => void) => {
+    if (isDirty) {
+      pendingActionRef.current = action
+      setShowUnsavedDialog(true)
+    } else {
+      action()
+    }
+  }
 
   const loadEmployees = async () => {
     try {
@@ -64,6 +98,7 @@ export default function AbsenPage() {
       })))
     } finally {
       setLoading(false)
+      setIsDirty(false)
     }
   }
 
@@ -79,6 +114,7 @@ export default function AbsenPage() {
     setEntries((prev) =>
       prev.map((e) => e.employee_id === empId ? { ...e, [shift]: !e[shift] } : e)
     )
+    setIsDirty(true)
   }
 
   const handleSave = async () => {
@@ -90,11 +126,30 @@ export default function AbsenPage() {
       ])
       await employeeAPI.bulkAttendance(records)
       toast.success('Absensi berhasil disimpan')
+      setIsDirty(false)
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Gagal menyimpan absensi')
     } finally {
       setSaving(false)
     }
+  }
+
+  // Dialog: user chose SIMPAN — save then run the pending action
+  const handleDialogSimpan = async () => {
+    await handleSave()
+    setShowUnsavedDialog(false)
+    pendingActionRef.current?.()
+    pendingActionRef.current = null
+  }
+
+  // Dialog: user chose BATAL — close dialog, stay on page, discard pending action
+  const handleDialogBatal = () => {
+    setShowUnsavedDialog(false)
+    pendingActionRef.current = null
+  }
+
+  const handleDateChange = (newDate: string) => {
+    guardAction(() => setDate(newDate))
   }
 
   const hadir = entries.filter((e) => e.shift1 || e.shift2).length
@@ -115,20 +170,18 @@ export default function AbsenPage() {
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/absen/scan">
-            <Button variant="outline" size="sm" className="gap-2">
-              <ScanLine className="h-4 w-4" /> Scan QR
-            </Button>
-          </Link>
-          <Link href="/absen/laporan">
-            <Button variant="outline" size="sm">Laporan & Gaji</Button>
-          </Link>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => guardAction(() => router.push('/absen/scan'))}>
+            <ScanLine className="h-4 w-4" /> Scan QR
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => guardAction(() => router.push('/absen/laporan'))}>
+            Laporan & Gaji
+          </Button>
           <div className="flex items-center gap-2">
             <Label>Tanggal:</Label>
             <Input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
               className="w-40"
             />
           </div>
@@ -206,9 +259,12 @@ export default function AbsenPage() {
                       <TableCell>
                         <Input
                           value={entry.notes}
-                          onChange={(e) => setEntries((prev) =>
-                            prev.map((en) => en.employee_id === entry.employee_id ? { ...en, notes: e.target.value } : en)
-                          )}
+                          onChange={(e) => {
+                            setEntries((prev) =>
+                              prev.map((en) => en.employee_id === entry.employee_id ? { ...en, notes: e.target.value } : en)
+                            )
+                            setIsDirty(true)
+                          }}
                           placeholder="Opsional"
                           className="h-8 text-sm"
                         />
@@ -221,6 +277,25 @@ export default function AbsenPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Unsaved changes guard dialog */}
+      <Dialog open={showUnsavedDialog} onOpenChange={(open) => { if (!open) handleDialogBatal() }}>
+        <DialogContent aria-describedby={undefined} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Lupa simpan absensi?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Ada perubahan absensi yang belum disimpan.</p>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={handleDialogBatal} disabled={saving}>
+              Batal
+            </Button>
+            <Button onClick={handleDialogSimpan} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
