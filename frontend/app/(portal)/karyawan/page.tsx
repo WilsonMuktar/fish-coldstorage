@@ -324,7 +324,7 @@ export default function KaryawanPage() {
           {qrEmployee && (
             <div className="flex flex-col items-center gap-3 py-2">
               {qrEmployee.code && Number(qrEmployee.code) > 0 ? (
-                <Barcode value={String(Number(qrEmployee.code))} width={2} height={80} fontSize={14} />
+                <Barcode value={String(Number(qrEmployee.code))} width={2} height={80} displayValue={false} />
               ) : (
                 <p className="text-sm text-muted-foreground">Kode belum tersedia (code: {String(qrEmployee.code)})</p>
               )}
