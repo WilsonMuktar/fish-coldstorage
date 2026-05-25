@@ -5,8 +5,9 @@ import { reviewAPI } from '@/lib/api'
 import { Receipt } from '@/types/api'
 import { Button } from '@/components/ui/button'
 import { formatDateTime, timeAgo } from '@/lib/formatters'
-import { ExternalLink, RefreshCw, Clock, CheckCircle2, XCircle, Inbox } from 'lucide-react'
+import { ArrowRight, RefreshCw, Clock, CheckCircle2, XCircle, Inbox } from 'lucide-react'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 const TYPE_LABELS: Record<string, string> = {
   bon_penjualan: 'Bon Penjualan',
@@ -28,6 +29,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
 type Filter = 'all' | 'pending' | 'approved' | 'rejected'
 
 export default function BonPage() {
+  const router = useRouter()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Filter>('all')
@@ -149,11 +151,9 @@ export default function BonPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <a href={`/review/${r.review_token}`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs">
-                          <ExternalLink className="h-3 w-3" /> Buka
-                        </Button>
-                      </a>
+                      <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs" onClick={() => router.push(`/review/${r.review_token}`)}>
+                        <ArrowRight className="h-3 w-3" /> Buka
+                      </Button>
                     </td>
                   </tr>
                 )

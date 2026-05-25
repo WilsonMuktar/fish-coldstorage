@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { itemAPI } from '@/lib/api'
 import { ItemStock, ItemTransaction } from '@/types/api'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,6 +13,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 
 export default function ItemsPage() {
+  const router = useRouter()
   const [stocks, setStocks] = useState<ItemStock[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<ItemStock | null>(null)
@@ -181,11 +183,12 @@ export default function ItemsPage() {
                       )}
                     </div>
                     {tx.review_token && (
-                      <Link href={`/review/${tx.review_token}`}
+                      <button
+                        onClick={() => router.push(`/review/${tx.review_token}`)}
                         className="shrink-0 text-primary hover:text-primary/70"
                         title="Lihat bon">
                         <ExternalLink className="h-4 w-4" />
-                      </Link>
+                      </button>
                     )}
                   </div>
                 ))}

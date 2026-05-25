@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { fishAPI } from '@/lib/api'
 import { FishTransaction } from '@/types/api'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,12 +18,12 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { formatDate, formatKg, formatIDR } from '@/lib/formatters'
 import { ChevronLeft, ChevronRight, Search, Receipt, Ship, Image as ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
-import Link from 'next/link'
 import Image from 'next/image'
 
 const PAGE_SIZE = 20
 
 export default function FishTransactionsPage() {
+  const router = useRouter()
   const [transactions, setTransactions] = useState<FishTransaction[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -187,14 +188,14 @@ export default function FishTransactionsPage() {
                           )}
                           {/* Link to review page */}
                           {tx.review_token ? (
-                            <Link
-                              href={`/review/${tx.review_token}`}
+                            <button
+                              onClick={() => router.push(`/review/${tx.review_token}`)}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                               title="Buka review bon"
                             >
                               <Receipt className="h-3 w-3" />
                               <span className="font-mono">{tx.review_token.slice(0, 8)}…</span>
-                            </Link>
+                            </button>
                           ) : (
                             tx.receipt_image_path ? null : (
                               <span className="text-xs text-muted-foreground">—</span>

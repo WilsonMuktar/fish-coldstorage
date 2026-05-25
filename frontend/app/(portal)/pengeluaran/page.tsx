@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { expenseAPI } from '@/lib/api'
 import { Expense } from '@/types/api'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ function categoryColor(c: string) {
 }
 
 export default function PengeluaranPage() {
+  const router = useRouter()
   const [records, setRecords] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Category>('')
@@ -375,16 +377,14 @@ export default function PengeluaranPage() {
                     {fmt(rec.amount)}
                   </span>
                   {rec.review_token && (
-                    <a
-                      href={`/review/${rec.review_token}`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      onClick={() => router.push(`/review/${rec.review_token}`)}
                       title="Lihat detail bon"
                       className="rounded-md p-1.5 transition-colors hover:text-white"
                       style={{ color: 'hsl(var(--muted-foreground))', border: '1px solid hsl(var(--border))' }}
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>

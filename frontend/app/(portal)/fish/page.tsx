@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { fishAPI, sortingAPI } from '@/lib/api'
 import { FishStock, FishType, FishTransaction } from '@/types/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -86,6 +87,7 @@ function groupByReceipt(txns: FishTransaction[]): ReceiptGroup[] {
 const SORT_PAGE_SIZE = 10
 
 export default function FishPage() {
+  const router = useRouter()
   const [stocks, setStocks] = useState<FishStock[]>([])
   const [fishTypes, setFishTypes] = useState<FishTypeExtended[]>([])
   const [loading, setLoading] = useState(true)
@@ -492,11 +494,12 @@ export default function FishPage() {
                           </td>
                           <td className="px-2 py-2.5 text-center">
                             {op.review_token && (
-                              <Link href={`/review/${op.review_token}`}
+                              <button
+                                onClick={() => router.push(`/review/${op.review_token}`)}
                                 className="inline-flex items-center text-primary hover:text-primary/70"
                                 title="Lihat bon sortir">
                                 <ExternalLink className="h-3.5 w-3.5" />
-                              </Link>
+                              </button>
                             )}
                           </td>
                         </tr>
@@ -629,11 +632,12 @@ export default function FishPage() {
                               +{formatKg(g.totalKg)}
                             </Badge>
                             {g.receiptToken && (
-                              <Link href={`/review/${g.receiptToken}`}
+                              <button
+                                onClick={() => router.push(`/review/${g.receiptToken}`)}
                                 className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:underline">
                                 <ExternalLink className="h-2.5 w-2.5" />
                                 {g.receiptToken.slice(0, 8)}…
-                              </Link>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -696,10 +700,11 @@ export default function FishPage() {
                           {op.notes && (
                             <p className="text-muted-foreground">
                               {op.review_token ? (
-                                <Link href={`/review/${op.review_token}`}
+                                <button
+                                  onClick={() => router.push(`/review/${op.review_token}`)}
                                   className="underline underline-offset-2 hover:text-primary transition-colors">
                                   {op.notes}
-                                </Link>
+                                </button>
                               ) : op.notes}
                             </p>
                           )}
@@ -742,11 +747,12 @@ export default function FishPage() {
                           <td className="py-1.5 text-muted-foreground">{tx.person_name || '—'}</td>
                           <td className="py-1.5 text-center">
                             {tx.review_token && (
-                              <Link href={`/review/${tx.review_token}`}
+                              <button
+                                onClick={() => router.push(`/review/${tx.review_token}`)}
                                 className="inline-flex items-center text-primary hover:text-primary/70"
                                 title="Lihat bon">
                                 <ExternalLink className="h-3 w-3" />
-                              </Link>
+                              </button>
                             )}
                           </td>
                         </tr>

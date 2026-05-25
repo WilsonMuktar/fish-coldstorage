@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { itemAPI } from '@/lib/api'
 import { ItemTransaction } from '@/types/api'
 import { Card, CardContent } from '@/components/ui/card'
@@ -8,10 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/shared/status-badge'
 import { formatDateTime, formatIDR } from '@/lib/formatters'
 import { toast } from 'sonner'
-import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 
 export default function ItemTransactionsPage() {
+  const router = useRouter()
   const [transactions, setTransactions] = useState<ItemTransaction[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -76,11 +77,12 @@ export default function ItemTransactionsPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       {tx.review_token && (
-                        <Link href={`/review/${tx.review_token}`}
+                        <button
+                          onClick={() => router.push(`/review/${tx.review_token}`)}
                           className="inline-flex items-center text-primary hover:text-primary/70"
                           title="Lihat bon">
                           <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
+                        </button>
                       )}
                     </TableCell>
                   </TableRow>

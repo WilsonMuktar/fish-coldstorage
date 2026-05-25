@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { fishAPI } from '@/lib/api'
 import { TimbanganRecord, Vessel } from '@/types/api'
 import { Card, CardContent } from '@/components/ui/card'
@@ -29,6 +30,7 @@ interface FishColumnRaw {
 }
 
 export default function PerkapalPage() {
+  const router = useRouter()
   const [timbangan, setTimbangan] = useState<TimbanganRecord[]>([])
   const [vessels, setVessels] = useState<Vessel[]>([])
   const [loading, setLoading] = useState(true)
@@ -222,16 +224,13 @@ export default function PerkapalPage() {
                         </TableCell>
                         <TableCell>
                           {reviewToken && (
-                            <a
-                              href={`/review/${reviewToken}`}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              onClick={e => { e.stopPropagation(); router.push(`/review/${reviewToken}`) }}
                               title="Lihat receipt"
-                              onClick={e => e.stopPropagation()}
                               className="p-1 rounded hover:bg-muted inline-flex"
                             >
                               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                            </a>
+                            </button>
                           )}
                         </TableCell>
                       </TableRow>
