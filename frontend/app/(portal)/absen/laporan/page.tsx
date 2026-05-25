@@ -41,8 +41,8 @@ function fmt(n: number) {
 
 function getDateRange(mode: 'weekly' | 'monthly', anchor: Date): { from: Date; to: Date; label: string } {
   if (mode === 'weekly') {
-    const from = startOfWeek(anchor, { weekStartsOn: 1 })
-    const to = endOfWeek(anchor, { weekStartsOn: 1 })
+    const from = startOfWeek(anchor, { weekStartsOn: 0 })
+    const to = endOfWeek(anchor, { weekStartsOn: 0 })
     return { from, to, label: `Minggu ${format(from, 'd MMM', { locale: id })} – ${format(to, 'd MMM yyyy', { locale: id })}` }
   } else {
     const from = startOfMonth(anchor)
