@@ -61,6 +61,11 @@ func (r *EmployeeRepo) UpdatePhoto(ctx context.Context, id uuid.UUID, photoPath 
 	return err
 }
 
+func (r *EmployeeRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM employees WHERE id=$1`, id)
+	return err
+}
+
 func (r *EmployeeRepo) Create(ctx context.Context, e *domain.Employee) error {
 	e.ID = uuid.New()
 	e.IsActive = true

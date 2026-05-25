@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { formatDate } from '@/lib/formatters'
-import { Plus, Loader2, Printer, Upload, User } from 'lucide-react'
+import { Plus, Loader2, Printer, Upload, User, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Barcode from 'react-barcode'
 import Image from 'next/image'
@@ -32,20 +32,16 @@ export default function KaryawanPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [editEmployee, setEditEmployee] = useState<Employee | null>(null)
   const [qrEmployee, setQrEmployee] = useState<Employee | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingUploadId, setPendingUploadId] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    position: '',
-    daily_salary: '',
-    hire_date: new Date().toISOString().slice(0, 10),
-    is_active: true,
-  })
+  const emptyForm = { name: '', phone: '', position: '', daily_salary: '', hire_date: new Date().toISOString().slice(0, 10), is_active: true }
+  const [form, setForm] = useState(emptyForm)
 
   const load = async () => {
     try {
@@ -60,22 +56,53 @@ export default function KaryawanPage() {
 
   useEffect(() => { load() }, [])
 
+  const openEdit = (emp: Employee) => {
+    setEditEmployee(emp)
+    setForm({
+      name: emp.name,
+      phone: emp.phone || '',
+      position: emp.position,
+      daily_salary: String(emp.daily_salary || ''),
+      hire_date: emp.hired_at ? emp.hired_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      is_active: emp.is_active,
+    })
+    setOpen(true)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await employeeAPI.create({
-        ...form,
-        daily_salary: parseFloat(form.daily_salary) || 0,
-      })
-      toast.success('Karyawan berhasil ditambahkan')
+      const payload = { ...form, daily_salary: parseFloat(form.daily_salary) || 0 }
+      if (editEmployee) {
+        await employeeAPI.update(editEmployee.id, payload)
+        toast.success('Karyawan berhasil diupdate')
+      } else {
+        await employeeAPI.create(payload)
+        toast.success('Karyawan berhasil ditambahkan')
+      }
       setOpen(false)
-      setForm({ name: '', phone: '', position: '', daily_salary: '', hire_date: new Date().toISOString().slice(0, 10), is_active: true })
+      setEditEmployee(null)
+      setForm(emptyForm)
       load()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Gagal menyimpan')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (emp: Employee) => {
+    if (!confirm(`Hapus karyawan "${emp.name}"? Data absensi terkait juga akan terhapus.`)) return
+    setDeletingId(emp.id)
+    try {
+      await employeeAPI.delete(emp.id)
+      toast.success('Karyawan dihapus')
+      setEmployees((prev) => prev.filter((e) => e.id !== emp.id))
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -137,7 +164,7 @@ export default function KaryawanPage() {
           <Button variant="outline" size="sm" className="gap-2" onClick={printAllQR}>
             <Printer className="h-4 w-4" /> Cetak QR
           </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditEmployee(null); setForm(emptyForm) } }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
                 <Plus className="h-4 w-4" /> Tambah Karyawan
@@ -145,7 +172,7 @@ export default function KaryawanPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Tambah Karyawan Baru</DialogTitle>
+                <DialogTitle>{editEmployee ? 'Edit Karyawan' : 'Tambah Karyawan Baru'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -264,6 +291,22 @@ export default function KaryawanPage() {
                     title="Lihat barcode"
                   >
                     QR
+                  </button>
+                </div>
+                <div className="mt-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => openEdit(emp)}
+                    className="flex-1 flex items-center justify-center gap-1 rounded py-1 text-xs hover:bg-muted text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(emp)}
+                    disabled={deletingId === emp.id}
+                    className="flex-1 flex items-center justify-center gap-1 rounded py-1 text-xs hover:bg-red-50 text-muted-foreground hover:text-red-600"
+                  >
+                    {deletingId === emp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    Hapus
                   </button>
                 </div>
               </div>

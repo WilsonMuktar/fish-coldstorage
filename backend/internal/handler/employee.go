@@ -132,6 +132,20 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, e)
 }
 
+// DELETE /v1/karyawan/{id}
+func (h *EmployeeHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if err := h.repo.Delete(r.Context(), id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
 // GET /v1/absen?date=YYYY-MM-DD  or  ?from=YYYY-MM-DD&to=YYYY-MM-DD
 func (h *EmployeeHandler) ListAttendance(w http.ResponseWriter, r *http.Request) {
 	fromStr := r.URL.Query().Get("from")

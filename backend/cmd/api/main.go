@@ -203,6 +203,7 @@ func main() {
 		r.Get("/v1/karyawan", employeeH.List)
 		r.Post("/v1/karyawan", employeeH.Create)
 		r.Put("/v1/karyawan/{id}", employeeH.Update)
+		r.Delete("/v1/karyawan/{id}", employeeH.Delete)
 		r.Post("/v1/karyawan/{id}/photo", employeeH.UploadPhoto)
 
 		// Absensi
