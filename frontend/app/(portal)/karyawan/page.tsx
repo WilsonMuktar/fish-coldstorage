@@ -170,7 +170,7 @@ export default function KaryawanPage() {
                 <Plus className="h-4 w-4" /> Tambah Karyawan
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>{editEmployee ? 'Edit Karyawan' : 'Tambah Karyawan Baru'}</DialogTitle>
               </DialogHeader>
@@ -317,7 +317,7 @@ export default function KaryawanPage() {
 
       {/* Barcode detail dialog */}
       <Dialog open={!!qrEmployee} onOpenChange={(o) => !o && setQrEmployee(null)}>
-        <DialogContent className="max-w-xs">
+        <DialogContent className="max-w-xs" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Barcode Absensi — {qrEmployee?.name}</DialogTitle>
           </DialogHeader>
