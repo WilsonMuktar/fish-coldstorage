@@ -44,7 +44,7 @@ export type ReceiptTypeOption = {
 }
 
 export const RECEIPT_TYPE_OPTIONS: ReceiptTypeOption[] = [
-  { value: 'timbangan_ikan_basah', label: 'Timbangan Ikan Basah' },
+  { value: 'timbangan_ikan_basah', label: 'Timbangan Ikan' },
   { value: 'timbangan_sortir', label: 'Timbangan Sortir' },
   { value: 'bon_penjualan', label: 'Bon Penjualan' },
   { value: 'bon_pengeluaran', label: 'Bon Pengeluaran' },

@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 const TYPE_LABELS: Record<string, string> = {
   bon_penjualan: 'Bon Penjualan',
   bon_pengeluaran: 'Bon Pengeluaran',
-  timbangan_ikan_basah: 'Timbangan Ikan Basah',
+  timbangan_ikan_basah: 'Timbangan Ikan',
   timbangan_sortir: 'Timbangan Sortir',
   beli_ikan: 'Beli Ikan',
   beli_item: 'Beli Item',
