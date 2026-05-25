@@ -248,6 +248,8 @@ type Employee struct {
 	IsActive    bool       `json:"is_active"`
 	HiredAt     *time.Time `json:"hired_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
+	PhotoPath   string     `json:"photo_path,omitempty"`
+	PhotoURL    string     `json:"photo_url,omitempty"`
 }
 
 type AttendanceRecord struct {

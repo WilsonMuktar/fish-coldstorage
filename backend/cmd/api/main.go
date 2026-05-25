@@ -84,7 +84,7 @@ func main() {
 	sortingH := handler.NewSortingHandler(sortingRepo, fishRepo, auditLog)
 	auditH := handler.NewAuditHandler(auditLog)
 	itemH := handler.NewItemHandler(itemRepo)
-	employeeH := handler.NewEmployeeHandler(employeeRepo)
+	employeeH := handler.NewEmployeeHandler(employeeRepo, cfg.DataDir, apiURL)
 	invoiceH := handler.NewInvoiceHandler(invoiceRepo)
 	titipanH := handler.NewTitipanHandler(titipanRepo)
 	lendingH := handler.NewLendingHandler(lendingRepo)
@@ -203,6 +203,7 @@ func main() {
 		r.Get("/v1/karyawan", employeeH.List)
 		r.Post("/v1/karyawan", employeeH.Create)
 		r.Put("/v1/karyawan/{id}", employeeH.Update)
+		r.Post("/v1/karyawan/{id}/photo", employeeH.UploadPhoto)
 
 		// Absensi
 		r.Get("/v1/absen", employeeH.ListAttendance)

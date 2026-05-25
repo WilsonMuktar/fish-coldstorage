@@ -15,7 +15,7 @@ func NewEmployeeRepo(db *pgxpool.Pool) *EmployeeRepo { return &EmployeeRepo{db: 
 
 func (r *EmployeeRepo) List(ctx context.Context) ([]domain.Employee, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, person_id, COALESCE(code,0), name, COALESCE(position,''), COALESCE(phone,''), daily_salary, is_active, hired_at, created_at
+		`SELECT id, person_id, COALESCE(code,0), name, COALESCE(position,''), COALESCE(phone,''), daily_salary, is_active, hired_at, created_at, COALESCE(photo_path,'')
 		 FROM employees ORDER BY name`)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func (r *EmployeeRepo) List(ctx context.Context) ([]domain.Employee, error) {
 	var out []domain.Employee
 	for rows.Next() {
 		var e domain.Employee
-		if err := rows.Scan(&e.ID, &e.PersonID, &e.Code, &e.Name, &e.Position, &e.Phone, &e.DailySalary, &e.IsActive, &e.HiredAt, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.PersonID, &e.Code, &e.Name, &e.Position, &e.Phone, &e.DailySalary, &e.IsActive, &e.HiredAt, &e.CreatedAt, &e.PhotoPath); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
@@ -35,9 +35,9 @@ func (r *EmployeeRepo) List(ctx context.Context) ([]domain.Employee, error) {
 func (r *EmployeeRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Employee, error) {
 	var e domain.Employee
 	err := r.db.QueryRow(ctx,
-		`SELECT id, person_id, COALESCE(code,0), name, COALESCE(position,''), COALESCE(phone,''), daily_salary, is_active, hired_at, created_at
+		`SELECT id, person_id, COALESCE(code,0), name, COALESCE(position,''), COALESCE(phone,''), daily_salary, is_active, hired_at, created_at, COALESCE(photo_path,'')
 		 FROM employees WHERE id=$1`, id).
-		Scan(&e.ID, &e.PersonID, &e.Code, &e.Name, &e.Position, &e.Phone, &e.DailySalary, &e.IsActive, &e.HiredAt, &e.CreatedAt)
+		Scan(&e.ID, &e.PersonID, &e.Code, &e.Name, &e.Position, &e.Phone, &e.DailySalary, &e.IsActive, &e.HiredAt, &e.CreatedAt, &e.PhotoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +47,18 @@ func (r *EmployeeRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Emplo
 func (r *EmployeeRepo) GetByCode(ctx context.Context, code int) (*domain.Employee, error) {
 	var e domain.Employee
 	err := r.db.QueryRow(ctx,
-		`SELECT id, person_id, COALESCE(code,0), name, COALESCE(position,''), COALESCE(phone,''), daily_salary, is_active, hired_at, created_at
+		`SELECT id, person_id, COALESCE(code,0), name, COALESCE(position,''), COALESCE(phone,''), daily_salary, is_active, hired_at, created_at, COALESCE(photo_path,'')
 		 FROM employees WHERE code=$1 AND is_active=true`, code).
-		Scan(&e.ID, &e.PersonID, &e.Code, &e.Name, &e.Position, &e.Phone, &e.DailySalary, &e.IsActive, &e.HiredAt, &e.CreatedAt)
+		Scan(&e.ID, &e.PersonID, &e.Code, &e.Name, &e.Position, &e.Phone, &e.DailySalary, &e.IsActive, &e.HiredAt, &e.CreatedAt, &e.PhotoPath)
 	if err != nil {
 		return nil, err
 	}
 	return &e, nil
+}
+
+func (r *EmployeeRepo) UpdatePhoto(ctx context.Context, id uuid.UUID, photoPath string) error {
+	_, err := r.db.Exec(ctx, `UPDATE employees SET photo_path=$2 WHERE id=$1`, id, photoPath)
+	return err
 }
 
 func (r *EmployeeRepo) Create(ctx context.Context, e *domain.Employee) error {

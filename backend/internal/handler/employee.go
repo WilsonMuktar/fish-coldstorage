@@ -2,7 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -12,10 +16,20 @@ import (
 )
 
 type EmployeeHandler struct {
-	repo *repo.EmployeeRepo
+	repo    *repo.EmployeeRepo
+	dataDir string
+	apiURL  string
 }
 
-func NewEmployeeHandler(r *repo.EmployeeRepo) *EmployeeHandler { return &EmployeeHandler{repo: r} }
+func NewEmployeeHandler(r *repo.EmployeeRepo, dataDir, apiURL string) *EmployeeHandler {
+	return &EmployeeHandler{repo: r, dataDir: dataDir, apiURL: apiURL}
+}
+
+func (h *EmployeeHandler) populatePhotoURL(e *domain.Employee) {
+	if e.PhotoPath != "" {
+		e.PhotoURL = fmt.Sprintf("%s/data/%s", h.apiURL, e.PhotoPath)
+	}
+}
 
 // GET /v1/karyawan
 func (h *EmployeeHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +38,60 @@ func (h *EmployeeHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	for i := range emps {
+		h.populatePhotoURL(&emps[i])
+	}
 	writeJSON(w, http.StatusOK, domain.ListResponse{Data: emps, Total: len(emps)})
+}
+
+// POST /v1/karyawan/{id}/photo  (multipart form: field "photo")
+func (h *EmployeeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large (max 10MB)")
+		return
+	}
+	file, header, err := r.FormFile("photo")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "photo field required")
+		return
+	}
+	defer file.Close()
+
+	dir := filepath.Join(h.dataDir, "employees")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not create directory")
+		return
+	}
+	filename := fmt.Sprintf("%s_%s", id.String(), header.Filename)
+	fp := filepath.Join(dir, filename)
+	out, err := os.Create(fp)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not save file")
+		return
+	}
+	defer out.Close()
+	if _, err := io.Copy(out, file); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not write file")
+		return
+	}
+
+	photoPath := filepath.Join("employees", filename)
+	if err := h.repo.UpdatePhoto(r.Context(), id, photoPath); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	emp, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "karyawan tidak ditemukan")
+		return
+	}
+	h.populatePhotoURL(emp)
+	writeJSON(w, http.StatusOK, emp)
 }
 
 // POST /v1/karyawan

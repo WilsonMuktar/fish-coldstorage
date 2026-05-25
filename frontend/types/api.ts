@@ -156,6 +156,8 @@ export interface Employee {
   is_active: boolean
   hired_at?: string
   created_at: string
+  photo_path?: string
+  photo_url?: string
 }
 
 export interface Attendance {

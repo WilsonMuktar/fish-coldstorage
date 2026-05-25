@@ -212,6 +212,21 @@ export const employeeAPI = {
     request<{ employee_id: string; employee_name: string; code: number; shift: number; date: string }>(
       '/v1/absen/scan', { method: 'POST', body: JSON.stringify({ code, date }) }
     ),
+  uploadPhoto: async (id: string, file: File): Promise<unknown> => {
+    const form = new FormData()
+    form.append('photo', file)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    const res = await fetch(`${BASE_URL}/v1/karyawan/${id}/photo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }))
+      throw new Error(err.error || 'Upload failed')
+    }
+    return res.json()
+  },
 }
 
 // Invoices

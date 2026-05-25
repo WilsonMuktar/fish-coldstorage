@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { employeeAPI } from '@/lib/api'
 import { Employee } from '@/types/api'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,12 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { formatDate } from '@/lib/formatters'
-import { Plus, Loader2, QrCode, Printer } from 'lucide-react'
+import { Plus, Loader2, Printer, Upload, User } from 'lucide-react'
 import { toast } from 'sonner'
 import Barcode from 'react-barcode'
+import Image from 'next/image'
 
 export default function KaryawanPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -35,7 +34,10 @@ export default function KaryawanPage() {
   const [open, setOpen] = useState(false)
   const [qrEmployee, setQrEmployee] = useState<Employee | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [pendingUploadId, setPendingUploadId] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -74,6 +76,30 @@ export default function KaryawanPage() {
       toast.error(err instanceof Error ? err.message : 'Gagal menyimpan')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handlePhotoClick = (id: string) => {
+    setPendingUploadId(id)
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !pendingUploadId) return
+    e.target.value = ''
+    setUploadingId(pendingUploadId)
+    try {
+      const res = await employeeAPI.uploadPhoto(pendingUploadId, file) as Employee
+      setEmployees((prev) => prev.map((emp) =>
+        emp.id === pendingUploadId ? { ...emp, photo_url: res.photo_url, photo_path: res.photo_path } : emp
+      ))
+      toast.success('Foto berhasil diupload')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Upload gagal')
+    } finally {
+      setUploadingId(null)
+      setPendingUploadId(null)
     }
   }
 
@@ -176,63 +202,75 @@ export default function KaryawanPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>No. HP</TableHead>
-                <TableHead>Jabatan</TableHead>
-                <TableHead>Upah/Hari</TableHead>
-                <TableHead>Tgl Bergabung</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-16">QR</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}><div className="h-4 w-3/4 animate-pulse rounded bg-muted" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : employees.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Belum ada karyawan
-                  </TableCell>
-                </TableRow>
-              ) : (
-                employees.map((emp) => (
-                  <TableRow key={emp.id}>
-                    <TableCell className="font-medium">{emp.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{emp.phone || '-'}</TableCell>
-                    <TableCell>{emp.position}</TableCell>
-                    <TableCell className="text-sm">
-                      {emp.daily_salary ? `Rp ${new Intl.NumberFormat('id-ID').format(emp.daily_salary)}` : '-'}
-                    </TableCell>
-                    <TableCell className="text-sm">{formatDate(emp.hired_at || '')}</TableCell>
-                    <TableCell><StatusBadge status={emp.is_active ? 'active' : 'inactive'} /></TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setQrEmployee(emp)}
-                        title="Lihat QR"
-                      >
-                        <QrCode className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Hidden file input for photo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card overflow-hidden shadow-sm">
+              <div className="aspect-square bg-muted animate-pulse" />
+              <div className="p-3 space-y-2">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : employees.length === 0 ? (
+        <div className="text-center text-muted-foreground py-16">Belum ada karyawan</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {employees.map((emp) => (
+            <div key={emp.id} className="group relative rounded-xl border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              {/* Photo area */}
+              <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                {emp.photo_url ? (
+                  <Image src={emp.photo_url} alt={emp.name} fill className="object-cover" unoptimized />
+                ) : (
+                  <User className="h-14 w-14 text-muted-foreground/30" />
+                )}
+                <button
+                  onClick={() => handlePhotoClick(emp.id)}
+                  disabled={uploadingId === emp.id}
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/0 group-hover:bg-black/40 transition-colors text-transparent group-hover:text-white text-xs font-medium"
+                >
+                  {uploadingId === emp.id
+                    ? <span className="text-white text-xs">Mengunggah...</span>
+                    : <><Upload className="h-5 w-5" /><span>Ganti Foto</span></>
+                  }
+                </button>
+              </div>
+              {/* Info */}
+              <div className="p-3">
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm leading-tight truncate">{emp.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{emp.position}</p>
+                  </div>
+                  <StatusBadge status={emp.is_active ? 'active' : 'inactive'} />
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Sejak {formatDate(emp.hired_at || '')}</span>
+                  <button
+                    onClick={() => setQrEmployee(emp)}
+                    className="text-xs text-primary hover:underline"
+                    title="Lihat barcode"
+                  >
+                    QR
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Barcode detail dialog */}
       <Dialog open={!!qrEmployee} onOpenChange={(o) => !o && setQrEmployee(null)}>
