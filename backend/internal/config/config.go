@@ -23,10 +23,11 @@ type Config struct {
 
 	DataDir string
 
-	R2AccountID string
-	R2AccessKey string
-	R2SecretKey string
-	R2Bucket    string
+	R2AccountID  string
+	R2AccessKey  string
+	R2SecretKey  string
+	R2Bucket     string
+	R2PublicURL  string
 
 	TelegramBotToken string
 
@@ -57,6 +58,7 @@ func Load() *Config {
 		R2AccessKey: getenv("R2_ACCESS_KEY", ""),
 		R2SecretKey: getenv("R2_SECRET_KEY", ""),
 		R2Bucket:    getenv("R2_BUCKET", "fish-coldstorage"),
+		R2PublicURL: getenv("R2_PUBLIC_URL", ""),
 
 		TelegramBotToken: getenv("TELEGRAM_BOT_TOKEN", ""),
 

@@ -16,10 +16,11 @@ import (
 type R2Client struct {
 	client    *s3.Client
 	bucket    string
-	publicURL string
+	publicURL string // e.g. https://pub-xxx.r2.dev
 }
 
-func NewR2Client(accountID, accessKey, secretKey, bucket string) (*R2Client, error) {
+// NewR2Client creates a client. publicURL is the r2.dev public domain (no trailing slash).
+func NewR2Client(accountID, accessKey, secretKey, bucket, publicURL string) (*R2Client, error) {
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
@@ -34,7 +35,7 @@ func NewR2Client(accountID, accessKey, secretKey, bucket string) (*R2Client, err
 	return &R2Client{
 		client:    client,
 		bucket:    bucket,
-		publicURL: fmt.Sprintf("%s/%s", endpoint, bucket),
+		publicURL: publicURL,
 	}, nil
 }
 

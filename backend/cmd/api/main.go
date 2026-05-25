@@ -74,7 +74,7 @@ func main() {
 	auditLog := audit.New(pool)
 
 	// R2 storage
-	r2, err := storage.NewR2Client(cfg.R2AccountID, cfg.R2AccessKey, cfg.R2SecretKey, cfg.R2Bucket)
+	r2, err := storage.NewR2Client(cfg.R2AccountID, cfg.R2AccessKey, cfg.R2SecretKey, cfg.R2Bucket, cfg.R2PublicURL)
 	if err != nil {
 		log.Fatalf("r2 init: %v", err)
 	}
