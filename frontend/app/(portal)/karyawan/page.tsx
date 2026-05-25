@@ -323,10 +323,10 @@ export default function KaryawanPage() {
           </DialogHeader>
           {qrEmployee && (
             <div className="flex flex-col items-center gap-3 py-2">
-              {qrEmployee.code > 0 ? (
-                <Barcode value={String(qrEmployee.code)} width={2} height={80} fontSize={14} />
+              {qrEmployee.code && Number(qrEmployee.code) > 0 ? (
+                <Barcode value={String(Number(qrEmployee.code))} width={2} height={80} fontSize={14} />
               ) : (
-                <p className="text-sm text-muted-foreground">Kode belum tersedia — jalankan: <code className="text-xs bg-muted px-1 rounded">UPDATE employees SET code = nextval(&apos;employee_code_seq&apos;) WHERE code IS NULL OR code = 0</code></p>
+                <p className="text-sm text-muted-foreground">Kode belum tersedia (code: {String(qrEmployee.code)})</p>
               )}
               <p className="text-sm text-muted-foreground text-center">{qrEmployee.position}</p>
               <Button
@@ -351,14 +351,14 @@ export default function KaryawanPage() {
             </div>
           )}
           <div id="barcode-dialog" className="hidden">
-            {(qrEmployee?.code ?? 0) > 0 && <Barcode value={String(qrEmployee!.code)} />}
+            {qrEmployee?.code && Number(qrEmployee.code) > 0 && <Barcode value={String(Number(qrEmployee.code))} />}
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Hidden print grid for all barcodes */}
       <div ref={printRef} className="hidden">
-        {active.filter((e) => e.code > 0).map((emp) => (
+        {active.filter((e) => Number(e.code) > 0).map((emp) => (
           <div key={emp.id} className="item">
             <Barcode value={String(emp.code)} width={1.5} height={60} fontSize={12} />
             <p className="name">{emp.name}</p>
