@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Save, ScanLine } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
@@ -109,6 +109,11 @@ export default function AbsenPage() {
           <p className="text-sm text-muted-foreground">Input absensi harian — 2 shift per hari</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/absen/scan">
+            <Button variant="outline" size="sm" className="gap-2">
+              <ScanLine className="h-4 w-4" /> Scan QR
+            </Button>
+          </Link>
           <Link href="/absen/laporan">
             <Button variant="outline" size="sm">Laporan & Gaji</Button>
           </Link>

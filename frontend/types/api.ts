@@ -151,11 +151,9 @@ export interface Employee {
   name: string
   phone?: string
   position: string
-  department?: string
-  hire_date: string
   daily_salary: number
   is_active: boolean
-  status: 'active' | 'inactive'
+  hired_at?: string
   created_at: string
 }
 
