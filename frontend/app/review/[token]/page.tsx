@@ -473,14 +473,18 @@ export default function ReviewPage() {
         },
       }
     } else {
-      const items = receiptItems.map((i) => ({
-        fish_code: i.fish_code,
-        item_name: i.item_name,
-        quantity: parseFloat(i.quantity) || 0,
-        unit: i.unit,
-        unit_price: parseFloat(i.unit_price) || 0,
-        total_price: parseFloat(i.total) || 0,
-      }))
+      const items = receiptItems.map((i) => {
+        const qty = parseFloat(i.quantity) || 0
+        const price = parseFloat(i.unit_price) || 0
+        return {
+          fish_code: i.fish_code,
+          item_name: i.item_name,
+          quantity: qty,
+          unit: i.unit,
+          unit_price: price,
+          total_price: qty * price,
+        }
+      })
       const total = items.reduce((s, i) => s + i.total_price, 0)
       return {
         receipt: {
@@ -978,7 +982,7 @@ export default function ReviewPage() {
                           <th className="p-2 text-right font-medium">Qty</th>
                           <th className="p-2 text-left font-medium">Satuan</th>
                           <th className="p-2 text-right font-medium">Harga/Satuan</th>
-                          <th className="p-2 text-right font-medium">Total</th>
+                          <th className="p-2 text-right font-medium">Subtotal</th>
                           <th className="p-2"></th>
                         </tr>
                       </thead>
@@ -1034,13 +1038,8 @@ export default function ReviewPage() {
                                 className="h-7 w-24 text-xs text-right"
                               />
                             </td>
-                            <td className="p-1">
-                              <Input
-                                type="number"
-                                value={item.total}
-                                onChange={(e) => updateReceiptItem(idx, 'total', e.target.value)}
-                                className="h-7 w-24 text-xs text-right"
-                              />
+                            <td className="p-2 text-right font-mono text-xs">
+                              {formatIDR((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0))}
                             </td>
                             <td className="p-1">
                               <button
@@ -1058,7 +1057,7 @@ export default function ReviewPage() {
                         <tr>
                           <td colSpan={4} className="p-2 text-right font-medium">Total:</td>
                           <td className="p-2 text-right font-mono font-semibold">
-                            {formatIDR(receiptItems.reduce((s, i) => s + (parseFloat(i.total) || 0), 0))}
+                            {formatIDR(receiptItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0))}
                           </td>
                           <td></td>
                         </tr>
@@ -1367,6 +1366,7 @@ export default function ReviewPage() {
                           <th className="p-2 text-left font-medium">Kode Ikan</th>
                           <th className="p-2 text-right font-medium">Harga/kg</th>
                           <th className="p-2 text-right font-medium">Berat (kg)</th>
+                          <th className="p-2 text-right font-medium">Subtotal</th>
                           <th className="p-2"></th>
                         </tr>
                       </thead>
@@ -1397,6 +1397,9 @@ export default function ReviewPage() {
                                 className="h-7 w-24 text-xs text-right"
                               />
                             </td>
+                            <td className="p-2 text-right font-mono text-xs">
+                              {formatIDR((parseFloat(row.price_per_kg) || 0) * (parseFloat(row.quantity_kg) || 0))}
+                            </td>
                             <td className="p-1">
                               <button
                                 type="button"
@@ -1414,6 +1417,9 @@ export default function ReviewPage() {
                           <td colSpan={2} className="p-2 text-right font-medium">Total KG:</td>
                           <td className="p-2 text-right font-mono font-semibold">
                             {timbanganRows.reduce((s, r) => s + (parseFloat(r.quantity_kg) || 0), 0).toLocaleString('id-ID')} kg
+                          </td>
+                          <td className="p-2 text-right font-mono font-semibold">
+                            {formatIDR(timbanganRows.reduce((s, r) => s + (parseFloat(r.price_per_kg) || 0) * (parseFloat(r.quantity_kg) || 0), 0))}
                           </td>
                           <td></td>
                         </tr>
