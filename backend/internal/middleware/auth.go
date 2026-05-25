@@ -76,6 +76,10 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		}
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
+		if publicKey == nil {
+			writeError(w, http.StatusInternalServerError, "auth public key not configured")
+			return
+		}
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
