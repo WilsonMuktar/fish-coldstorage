@@ -256,8 +256,8 @@ type AttendanceRecord struct {
 	ID           uuid.UUID `json:"id"`
 	EmployeeID   uuid.UUID `json:"employee_id"`
 	EmployeeName string    `json:"employee_name,omitempty"`
-	AttendDate   time.Time `json:"attend_date"`
-	Shift        int       `json:"shift"` // 1=pagi, 2=sore
+	AttendDate   string    `json:"attend_date"` // YYYY-MM-DD
+	Shift        int       `json:"shift"`        // 1=pagi, 2=sore
 	Present      bool      `json:"present"`
 	Notes        string    `json:"notes,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`

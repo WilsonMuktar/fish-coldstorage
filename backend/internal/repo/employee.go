@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/samudera/fish-coldstorage/internal/domain"
 )
@@ -84,6 +85,21 @@ func (r *EmployeeRepo) Update(ctx context.Context, e *domain.Employee) error {
 	return err
 }
 
+func scanAttendanceRows(rows pgx.Rows) ([]domain.AttendanceRecord, error) {
+	defer rows.Close()
+	var out []domain.AttendanceRecord
+	for rows.Next() {
+		var a domain.AttendanceRecord
+		var attendDate time.Time
+		if err := rows.Scan(&a.ID, &a.EmployeeID, &a.EmployeeName, &attendDate, &a.Shift, &a.Present, &a.Notes, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		a.AttendDate = attendDate.Format("2006-01-02")
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 func (r *EmployeeRepo) ListAttendance(ctx context.Context, date time.Time) ([]domain.AttendanceRecord, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT a.id, a.employee_id, e.name, a.attend_date, a.shift, a.present, COALESCE(a.notes,''), a.created_at
@@ -94,16 +110,7 @@ func (r *EmployeeRepo) ListAttendance(ctx context.Context, date time.Time) ([]do
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []domain.AttendanceRecord
-	for rows.Next() {
-		var a domain.AttendanceRecord
-		if err := rows.Scan(&a.ID, &a.EmployeeID, &a.EmployeeName, &a.AttendDate, &a.Shift, &a.Present, &a.Notes, &a.CreatedAt); err != nil {
-			return nil, err
-		}
-		out = append(out, a)
-	}
-	return out, rows.Err()
+	return scanAttendanceRows(rows)
 }
 
 func (r *EmployeeRepo) ListAttendanceRange(ctx context.Context, from, to time.Time) ([]domain.AttendanceRecord, error) {
@@ -116,16 +123,7 @@ func (r *EmployeeRepo) ListAttendanceRange(ctx context.Context, from, to time.Ti
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []domain.AttendanceRecord
-	for rows.Next() {
-		var a domain.AttendanceRecord
-		if err := rows.Scan(&a.ID, &a.EmployeeID, &a.EmployeeName, &a.AttendDate, &a.Shift, &a.Present, &a.Notes, &a.CreatedAt); err != nil {
-			return nil, err
-		}
-		out = append(out, a)
-	}
-	return out, rows.Err()
+	return scanAttendanceRows(rows)
 }
 
 func (r *EmployeeRepo) UpsertAttendance(ctx context.Context, recs []domain.AttendanceRecord) error {

@@ -224,11 +224,9 @@ func (h *EmployeeHandler) ScanAttendance(w http.ResponseWriter, r *http.Request)
 	}
 
 	now := time.Now()
-	date := now.Truncate(24 * time.Hour)
+	dateStr := now.Format("2006-01-02")
 	if body.Date != "" {
-		if d, err := time.Parse("2006-01-02", body.Date); err == nil {
-			date = d
-		}
+		dateStr = body.Date
 	}
 
 	shift := 1
@@ -239,7 +237,7 @@ func (h *EmployeeHandler) ScanAttendance(w http.ResponseWriter, r *http.Request)
 	rec := domain.AttendanceRecord{
 		ID:         uuid.New(),
 		EmployeeID: emp.ID,
-		AttendDate: date,
+		AttendDate: dateStr,
 		Shift:      shift,
 		Present:    true,
 	}
@@ -253,6 +251,6 @@ func (h *EmployeeHandler) ScanAttendance(w http.ResponseWriter, r *http.Request)
 		"employee_name": emp.Name,
 		"code":          emp.Code,
 		"shift":         shift,
-		"date":          date.Format("2006-01-02"),
+		"date":          dateStr,
 	})
 }
