@@ -579,18 +579,8 @@ export default function ReviewPage() {
         const err = await res.json().catch(() => ({ error: 'Gagal merevisi' }))
         throw new Error(err.error)
       }
-      // Re-fetch from server so confirmed_data (now NULL) and image_url are fresh
-      const refreshRes = await fetch(`${BASE_URL}/v1/reviews/${token}`)
-      if (refreshRes.ok) {
-        const refreshed: ReviewData = await refreshRes.json()
-        if (!refreshed.image_url && refreshed.image_path) {
-          refreshed.image_url = `${BASE_URL}/data/${refreshed.image_path}`
-        }
-        setData({ ...refreshed, status: 'pending' })
-        populateForm({ ...refreshed, status: 'pending' })
-      } else {
-        setData(prev => prev ? { ...prev, status: 'pending' } : prev)
-      }
+      // confirmed_data is kept on the server — just flip status locally
+      setData(prev => prev ? { ...prev, status: 'pending' } : prev)
       setIsRevising(true)
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Terjadi kesalahan')

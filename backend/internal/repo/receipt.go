@@ -143,7 +143,7 @@ func (r *ReceiptRepo) Reject(ctx context.Context, id uuid.UUID, reason string, r
 
 func (r *ReceiptRepo) ResetToPending(ctx context.Context, id uuid.UUID, reviewerPersonID *uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `
-		UPDATE receipts SET status='pending', confirmed_data=NULL, reviewed_at=NULL,
+		UPDATE receipts SET status='pending', reviewed_at=NULL,
 			reviewed_by_person_id=$1, review_token_used=false WHERE id=$2`,
 		reviewerPersonID, id)
 	return err
