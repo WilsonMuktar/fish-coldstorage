@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"time"
 
@@ -97,6 +99,15 @@ func main() {
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(corsMiddleware)
+
+	// Proxy /v1/auth/* → auth service
+	authServiceURL := cfg.AuthServiceURL
+	if authServiceURL == "" {
+		authServiceURL = "http://localhost:9001"
+	}
+	authTarget, _ := url.Parse(authServiceURL)
+	authProxy := httputil.NewSingleHostReverseProxy(authTarget)
+	r.Handle("/v1/auth/*", authProxy)
 
 	// Health
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
