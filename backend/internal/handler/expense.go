@@ -2,26 +2,24 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/samudera/fish-coldstorage/internal/domain"
 	"github.com/samudera/fish-coldstorage/internal/repo"
+	"github.com/samudera/fish-coldstorage/internal/storage"
 )
 
 type ExpenseHandler struct {
-	repo    *repo.ExpenseRepo
-	dataDir string
+	repo *repo.ExpenseRepo
+	r2   *storage.R2Client
 }
 
-func NewExpenseHandler(r *repo.ExpenseRepo, dataDir string) *ExpenseHandler {
-	return &ExpenseHandler{repo: r, dataDir: dataDir}
+func NewExpenseHandler(r *repo.ExpenseRepo, r2 *storage.R2Client) *ExpenseHandler {
+	return &ExpenseHandler{repo: r, r2: r2}
 }
 
 // GET /v1/expenses?category=&limit=&offset=
@@ -78,8 +76,7 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // POST /v1/expenses/{id}/photo
 func (h *ExpenseHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
@@ -99,21 +96,16 @@ func (h *ExpenseHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	dir := filepath.Join(h.dataDir, "expenses")
-	if err := os.MkdirAll(dir, 0755); err != nil {
+
+	key := "expenses/" + id.String() + "_" + header.Filename
+	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
+		return
+	}
+	if err := h.repo.UpdatePhoto(r.Context(), id, photoURL); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fn := fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename)
-	fp := filepath.Join(dir, fn)
-	if err := os.WriteFile(fp, data, 0644); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	photoPath := filepath.Join("expenses", fn)
-	if err := h.repo.UpdatePhoto(r.Context(), id, photoPath); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"photo_path": photoPath})
+	writeJSON(w, http.StatusOK, map[string]string{"photo_url": photoURL})
 }

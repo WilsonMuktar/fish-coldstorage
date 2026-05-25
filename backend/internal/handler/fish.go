@@ -2,39 +2,36 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/samudera/fish-coldstorage/internal/audit"
 	"github.com/samudera/fish-coldstorage/internal/domain"
 	"github.com/samudera/fish-coldstorage/internal/repo"
+	"github.com/samudera/fish-coldstorage/internal/storage"
 )
 
 type FishHandler struct {
-	repo    *repo.FishRepo
-	dataDir string
-	apiURL  string
-	audit   *audit.Log
+	repo  *repo.FishRepo
+	r2    *storage.R2Client
+	audit *audit.Log
 }
 
-func NewFishHandler(r *repo.FishRepo, dataDir, apiURL string, auditLog *audit.Log) *FishHandler {
-	return &FishHandler{repo: r, dataDir: dataDir, apiURL: apiURL, audit: auditLog}
+func NewFishHandler(r *repo.FishRepo, r2 *storage.R2Client, auditLog *audit.Log) *FishHandler {
+	return &FishHandler{repo: r, r2: r2, audit: auditLog}
 }
 
 func (h *FishHandler) populatePhotoURL(f *domain.FishType) {
 	if f.PhotoPath != "" {
-		f.PhotoURL = fmt.Sprintf("%s/data/%s", h.apiURL, f.PhotoPath)
+		f.PhotoURL = f.PhotoPath // PhotoPath now stores the full R2 URL
 	}
 }
 
 func (h *FishHandler) populateVesselPhotoURL(v *domain.Vessel) {
 	if v.PhotoPath != "" {
-		v.PhotoURL = fmt.Sprintf("%s/data/%s", h.apiURL, v.PhotoPath)
+		v.PhotoURL = v.PhotoPath
 	}
 }
 
@@ -206,38 +203,31 @@ func (h *FishHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
-	dir := filepath.Join(h.dataDir, "fish")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not create directory")
-		return
-	}
-	filename := fmt.Sprintf("%s_%s", id.String(), header.Filename)
-	fp := filepath.Join(dir, filename)
-	out, err := os.Create(fp)
+	data, err := io.ReadAll(file)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save file")
-		return
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, file); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not write file")
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	photoPath := filepath.Join("fish", filename)
+	key := "fish/" + id.String() + "_" + header.Filename
+	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
+		return
+	}
+
 	ft, err := h.repo.GetTypeByID(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "fish type not found")
 		return
 	}
-	if err := h.repo.UpdateType(r.Context(), id, ft.Name, ft.Description, ft.Aliases, photoPath); err != nil {
+	if err := h.repo.UpdateType(r.Context(), id, ft.Name, ft.Description, ft.Aliases, photoURL); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	ft.PhotoPath = photoPath
-	h.populatePhotoURL(ft)
-	h.audit.Record(r.Context(), r, "fish_type", "upload_photo", id, map[string]string{"photo": photoPath})
+	ft.PhotoPath = photoURL
+	ft.PhotoURL = photoURL
+	h.audit.Record(r.Context(), r, "fish_type", "upload_photo", id, map[string]string{"photo": photoURL})
 	writeJSON(w, http.StatusOK, ft)
 }
 
@@ -264,11 +254,6 @@ func (h *FishHandler) ListTransactions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
-	}
-	for i := range txns {
-		if txns[i].ReceiptImagePath != "" {
-			txns[i].ReceiptImagePath = fmt.Sprintf("%s/data/%s", h.apiURL, txns[i].ReceiptImagePath)
-		}
 	}
 	writeJSON(w, http.StatusOK, domain.ListResponse{Data: txns, Total: total, Limit: limit})
 }
@@ -423,33 +408,25 @@ func (h *FishHandler) UploadVesselPhoto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	defer file.Close()
-
-	dir := filepath.Join(h.dataDir, "vessels")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not create directory")
-		return
-	}
-	filename := fmt.Sprintf("%s_%s", id.String(), header.Filename)
-	fp := filepath.Join(dir, filename)
-	out, err := os.Create(fp)
+	data, err := io.ReadAll(file)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save file")
-		return
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, file); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not write file")
-		return
-	}
-
-	photoPath := filepath.Join("vessels", filename)
-	if err := h.repo.UpdateVesselPhoto(r.Context(), id, photoPath); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	photoURL := fmt.Sprintf("%s/data/%s", h.apiURL, photoPath)
-	h.audit.Record(r.Context(), r, "vessel", "upload_photo", id, map[string]string{"photo": photoPath})
-	writeJSON(w, http.StatusOK, map[string]string{"photo_url": photoURL, "photo_path": photoPath})
+
+	key := "vessels/" + id.String() + "_" + header.Filename
+	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
+		return
+	}
+
+	if err := h.repo.UpdateVesselPhoto(r.Context(), id, photoURL); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.audit.Record(r.Context(), r, "vessel", "upload_photo", id, map[string]string{"photo": photoURL})
+	writeJSON(w, http.StatusOK, map[string]string{"photo_url": photoURL, "photo_path": photoURL})
 }
 
 // POST /v1/perkapal

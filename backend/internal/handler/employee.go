@@ -2,32 +2,29 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/samudera/fish-coldstorage/internal/domain"
 	"github.com/samudera/fish-coldstorage/internal/repo"
+	"github.com/samudera/fish-coldstorage/internal/storage"
 )
 
 type EmployeeHandler struct {
-	repo    *repo.EmployeeRepo
-	dataDir string
-	apiURL  string
+	repo *repo.EmployeeRepo
+	r2   *storage.R2Client
 }
 
-func NewEmployeeHandler(r *repo.EmployeeRepo, dataDir, apiURL string) *EmployeeHandler {
-	return &EmployeeHandler{repo: r, dataDir: dataDir, apiURL: apiURL}
+func NewEmployeeHandler(r *repo.EmployeeRepo, r2 *storage.R2Client) *EmployeeHandler {
+	return &EmployeeHandler{repo: r, r2: r2}
 }
 
 func (h *EmployeeHandler) populatePhotoURL(e *domain.Employee) {
 	if e.PhotoPath != "" {
-		e.PhotoURL = fmt.Sprintf("%s/data/%s", h.apiURL, e.PhotoPath)
+		e.PhotoURL = e.PhotoPath
 	}
 }
 
@@ -61,27 +58,20 @@ func (h *EmployeeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
-	dir := filepath.Join(h.dataDir, "employees")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not create directory")
-		return
-	}
-	filename := fmt.Sprintf("%s_%s", id.String(), header.Filename)
-	fp := filepath.Join(dir, filename)
-	out, err := os.Create(fp)
+	data, err := io.ReadAll(file)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save file")
-		return
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, file); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not write file")
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	photoPath := filepath.Join("employees", filename)
-	if err := h.repo.UpdatePhoto(r.Context(), id, photoPath); err != nil {
+	key := "employees/" + id.String() + "_" + header.Filename
+	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
+		return
+	}
+
+	if err := h.repo.UpdatePhoto(r.Context(), id, photoURL); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -90,7 +80,7 @@ func (h *EmployeeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "karyawan tidak ditemukan")
 		return
 	}
-	h.populatePhotoURL(emp)
+	emp.PhotoURL = photoURL
 	writeJSON(w, http.StatusOK, emp)
 }
 

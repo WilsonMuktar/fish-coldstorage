@@ -23,6 +23,7 @@ import (
 	"github.com/samudera/fish-coldstorage/internal/ollama"
 	"github.com/samudera/fish-coldstorage/internal/repo"
 	"github.com/samudera/fish-coldstorage/internal/service"
+	"github.com/samudera/fish-coldstorage/internal/storage"
 )
 
 func main() {
@@ -72,25 +73,25 @@ func main() {
 	// Audit log
 	auditLog := audit.New(pool)
 
-	// Data directory for file uploads
-	dataDir := cfg.DataDir
-	if dataDir == "" {
-		dataDir = "data"
+	// R2 storage
+	r2, err := storage.NewR2Client(cfg.R2AccountID, cfg.R2AccessKey, cfg.R2SecretKey, cfg.R2Bucket)
+	if err != nil {
+		log.Fatalf("r2 init: %v", err)
 	}
 
 	// Handlers
 	reviewH := handler.NewReviewHandler(reviewSvc, auditLog)
-	fishH := handler.NewFishHandler(fishRepo, cfg.DataDir, apiURL, auditLog)
+	fishH := handler.NewFishHandler(fishRepo, r2, auditLog)
 	sortingH := handler.NewSortingHandler(sortingRepo, fishRepo, auditLog)
 	auditH := handler.NewAuditHandler(auditLog)
 	itemH := handler.NewItemHandler(itemRepo)
-	employeeH := handler.NewEmployeeHandler(employeeRepo, cfg.DataDir, apiURL)
+	employeeH := handler.NewEmployeeHandler(employeeRepo, r2)
 	invoiceH := handler.NewInvoiceHandler(invoiceRepo)
 	titipanH := handler.NewTitipanHandler(titipanRepo)
 	lendingH := handler.NewLendingHandler(lendingRepo)
 	dashboardH := handler.NewDashboardHandler(dashboardSvc)
 	beliIkanH := handler.NewBeliIkanHandler(beliIkanRepo, fishRepo)
-	expenseH := handler.NewExpenseHandler(expenseRepo, dataDir)
+	expenseH := handler.NewExpenseHandler(expenseRepo, r2)
 	ocrClient := ocr.NewClient(cfg.OCRURL)
 	ollamaClient := ollama.NewClient(cfg.OllamaURL, cfg.OllamaModel, os.Getenv("OLLAMA_DEBUG") == "1")
 	ocrH := handler.NewOCRHandler(ocrClient, ollamaClient)
@@ -119,9 +120,6 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
-
-	// Static files for receipt images
-	r.Handle("/data/*", http.StripPrefix("/data/", http.FileServer(http.Dir(dataDir))))
 
 	// Public routes — no auth required, but will capture identity if JWT present
 	r.Group(func(r chi.Router) {

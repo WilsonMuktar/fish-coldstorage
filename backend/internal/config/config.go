@@ -23,6 +23,11 @@ type Config struct {
 
 	DataDir string
 
+	R2AccountID string
+	R2AccessKey string
+	R2SecretKey string
+	R2Bucket    string
+
 	TelegramBotToken string
 
 	OCRURL      string // OCR service URL
@@ -47,6 +52,11 @@ func Load() *Config {
 		AuthPublicKeyPath: getenv("AUTH_PUBLIC_KEY_PATH", "secrets/auth_public.pem"),
 
 		DataDir: getenv("DATA_DIR", "data"),
+
+		R2AccountID: getenv("R2_ACCOUNT_ID", ""),
+		R2AccessKey: getenv("R2_ACCESS_KEY", ""),
+		R2SecretKey: getenv("R2_SECRET_KEY", ""),
+		R2Bucket:    getenv("R2_BUCKET", "fish-coldstorage"),
 
 		TelegramBotToken: getenv("TELEGRAM_BOT_TOKEN", ""),
 
