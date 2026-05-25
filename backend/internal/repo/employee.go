@@ -64,11 +64,11 @@ func (r *EmployeeRepo) Update(ctx context.Context, e *domain.Employee) error {
 
 func (r *EmployeeRepo) ListAttendance(ctx context.Context, date time.Time) ([]domain.AttendanceRecord, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT a.id, a.employee_id, e.name, a.attend_date, a.present, COALESCE(a.notes,''), a.created_at
+		SELECT a.id, a.employee_id, e.name, a.attend_date, a.shift, a.present, COALESCE(a.notes,''), a.created_at
 		FROM attendance a
 		JOIN employees e ON e.id = a.employee_id
 		WHERE a.attend_date = $1
-		ORDER BY e.name`, date)
+		ORDER BY e.name, a.shift`, date)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,29 @@ func (r *EmployeeRepo) ListAttendance(ctx context.Context, date time.Time) ([]do
 	var out []domain.AttendanceRecord
 	for rows.Next() {
 		var a domain.AttendanceRecord
-		if err := rows.Scan(&a.ID, &a.EmployeeID, &a.EmployeeName, &a.AttendDate, &a.Present, &a.Notes, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.EmployeeID, &a.EmployeeName, &a.AttendDate, &a.Shift, &a.Present, &a.Notes, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+func (r *EmployeeRepo) ListAttendanceRange(ctx context.Context, from, to time.Time) ([]domain.AttendanceRecord, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT a.id, a.employee_id, e.name, a.attend_date, a.shift, a.present, COALESCE(a.notes,''), a.created_at
+		FROM attendance a
+		JOIN employees e ON e.id = a.employee_id
+		WHERE a.attend_date >= $1 AND a.attend_date <= $2
+		ORDER BY e.name, a.attend_date, a.shift`, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.AttendanceRecord
+	for rows.Next() {
+		var a domain.AttendanceRecord
+		if err := rows.Scan(&a.ID, &a.EmployeeID, &a.EmployeeName, &a.AttendDate, &a.Shift, &a.Present, &a.Notes, &a.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
@@ -89,13 +111,16 @@ func (r *EmployeeRepo) UpsertAttendance(ctx context.Context, recs []domain.Atten
 		if recs[i].ID == uuid.Nil {
 			recs[i].ID = uuid.New()
 		}
+		if recs[i].Shift == 0 {
+			recs[i].Shift = 1
+		}
 		recs[i].CreatedAt = time.Now()
 		_, err := r.db.Exec(ctx, `
-			INSERT INTO attendance(id,employee_id,attend_date,present,notes)
-			VALUES($1,$2,$3,$4,$5)
-			ON CONFLICT(employee_id, attend_date) DO UPDATE
+			INSERT INTO attendance(id,employee_id,attend_date,shift,present,notes)
+			VALUES($1,$2,$3,$4,$5,$6)
+			ON CONFLICT(employee_id, attend_date, shift) DO UPDATE
 			SET present=EXCLUDED.present, notes=EXCLUDED.notes`,
-			recs[i].ID, recs[i].EmployeeID, recs[i].AttendDate, recs[i].Present, recs[i].Notes)
+			recs[i].ID, recs[i].EmployeeID, recs[i].AttendDate, recs[i].Shift, recs[i].Present, recs[i].Notes)
 		if err != nil {
 			return err
 		}

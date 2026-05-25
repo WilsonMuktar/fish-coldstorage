@@ -65,8 +65,31 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, e)
 }
 
-// GET /v1/absen?date=YYYY-MM-DD
+// GET /v1/absen?date=YYYY-MM-DD  or  ?from=YYYY-MM-DD&to=YYYY-MM-DD
 func (h *EmployeeHandler) ListAttendance(w http.ResponseWriter, r *http.Request) {
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+
+	if fromStr != "" && toStr != "" {
+		from, err := time.Parse("2006-01-02", fromStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid from date")
+			return
+		}
+		to, err := time.Parse("2006-01-02", toStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid to date")
+			return
+		}
+		recs, err := h.repo.ListAttendanceRange(r.Context(), from, to)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, domain.ListResponse{Data: recs, Total: len(recs)})
+		return
+	}
+
 	dateStr := r.URL.Query().Get("date")
 	var date time.Time
 	if dateStr != "" {

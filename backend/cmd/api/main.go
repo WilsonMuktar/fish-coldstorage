@@ -279,6 +279,7 @@ func runMigrations(pool *pgxpool.Pool) error {
 		"migrations/000007_expense_photo.up.sql",
 		"migrations/000008_fish_type_canonical.up.sql",
 		"migrations/000009_sorting_receipt.up.sql",
+		"migrations/000010_attendance_shift.up.sql",
 	} {
 		sql, err := os.ReadFile(f)
 		if err != nil {

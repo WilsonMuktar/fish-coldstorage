@@ -153,6 +153,8 @@ export interface Employee {
   position: string
   department?: string
   hire_date: string
+  daily_salary: number
+  is_active: boolean
   status: 'active' | 'inactive'
   created_at: string
 }
@@ -161,10 +163,10 @@ export interface Attendance {
   id: string
   employee_id: string
   employee_name: string
-  date: string
-  status: 'hadir' | 'izin' | 'sakit' | 'alpha'
+  attend_date: string
+  shift: 1 | 2
+  present: boolean
   notes?: string
-  created_by: string
   created_at: string
 }
 

@@ -204,6 +204,8 @@ export const employeeAPI = {
     request<unknown>(`/v1/karyawan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getAttendance: (date?: string) =>
     request<{ data: unknown[] }>(`/v1/absen${date ? '?date=' + date : ''}`),
+  getAttendanceRange: (from: string, to: string) =>
+    request<{ data: unknown[] }>(`/v1/absen?from=${from}&to=${to}`),
   bulkAttendance: (data: unknown) =>
     request<unknown>('/v1/absen', { method: 'POST', body: JSON.stringify(data) }),
 }
