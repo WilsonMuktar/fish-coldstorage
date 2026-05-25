@@ -66,21 +66,20 @@ export default function ScanAbsenPage() {
 
   const startScanner = async () => {
     if (scannerRef.current) return
-    const scanner = new Html5Qrcode('qr-reader', { verbose: false })
+    const scanner = new Html5Qrcode('qr-reader', {
+      verbose: false,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.QR_CODE,
+      ],
+    })
     scannerRef.current = scanner
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        {
-          fps: 15,
-          qrbox: { width: 280, height: 120 },
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.QR_CODE,
-          ],
-        },
+        { fps: 15, qrbox: { width: 280, height: 120 } },
         onScan,
         () => {}
       )
