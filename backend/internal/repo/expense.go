@@ -26,6 +26,17 @@ func (r *ExpenseRepo) Create(ctx context.Context, e *domain.Expense) error {
 	).Scan(&e.ID, &e.CreatedAt)
 }
 
+func (r *ExpenseRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Expense, error) {
+	var e domain.Expense
+	err := r.db.QueryRow(ctx,
+		`SELECT id, date, category, COALESCE(description,''), amount, COALESCE(notes,''), COALESCE(photo_path,''), created_at FROM expenses WHERE id=$1`, id).
+		Scan(&e.ID, &e.Date, &e.Category, &e.Description, &e.Amount, &e.Notes, &e.PhotoPath, &e.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
 func (r *ExpenseRepo) UpdatePhoto(ctx context.Context, id uuid.UUID, photoPath string) error {
 	_, err := r.db.Exec(ctx, `UPDATE expenses SET photo_path = $1 WHERE id = $2`, photoPath, id)
 	return err

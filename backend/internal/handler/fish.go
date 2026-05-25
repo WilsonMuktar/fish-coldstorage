@@ -209,18 +209,19 @@ func (h *FishHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := "fish/" + id.String() + "_" + header.Filename
-	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
-		return
-	}
-
 	ft, err := h.repo.GetTypeByID(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "fish type not found")
 		return
 	}
+
+	key := "fish/" + id.String() + "_" + header.Filename
+	photoURL, err := h.r2.Replace(r.Context(), ft.PhotoPath, key, data, header.Filename)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
+		return
+	}
+
 	if err := h.repo.UpdateType(r.Context(), id, ft.Name, ft.Description, ft.Aliases, photoURL); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -414,8 +415,14 @@ func (h *FishHandler) UploadVesselPhoto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	vessel, err := h.repo.GetVesselByID(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "vessel not found")
+		return
+	}
+
 	key := "vessels/" + id.String() + "_" + header.Filename
-	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	photoURL, err := h.r2.Replace(r.Context(), vessel.PhotoPath, key, data, header.Filename)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
 		return

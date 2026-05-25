@@ -441,6 +441,18 @@ func (r *FishRepo) GetVesselByName(ctx context.Context, name string) (*domain.Ve
 	return &v, nil
 }
 
+func (r *FishRepo) GetVesselByID(ctx context.Context, id uuid.UUID) (*domain.Vessel, error) {
+	var v domain.Vessel
+	err := r.db.QueryRow(ctx,
+		`SELECT id, name, COALESCE(registration_no,''), owner_person_id, COALESCE(owner_name,''), COALESCE(captain_name,''), COALESCE(photo_path,''), is_active, created_at
+		 FROM vessels WHERE id=$1`, id).
+		Scan(&v.ID, &v.Name, &v.RegistrationNo, &v.OwnerPersonID, &v.OwnerName, &v.CaptainName, &v.PhotoPath, &v.IsActive, &v.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
 func (r *FishRepo) UpdateVesselPhoto(ctx context.Context, id uuid.UUID, photoPath string) error {
 	_, err := r.db.Exec(ctx, `UPDATE vessels SET photo_path=$1 WHERE id=$2`, photoPath, id)
 	return err

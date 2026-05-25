@@ -97,8 +97,14 @@ func (h *ExpenseHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existing, _ := h.repo.GetByID(r.Context(), id)
+	var oldURL string
+	if existing != nil {
+		oldURL = existing.PhotoPath
+	}
+
 	key := "expenses/" + id.String() + "_" + header.Filename
-	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	photoURL, err := h.r2.Replace(r.Context(), oldURL, key, data, header.Filename)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
 		return

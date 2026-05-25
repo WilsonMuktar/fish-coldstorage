@@ -64,8 +64,14 @@ func (h *EmployeeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	emp, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "karyawan tidak ditemukan")
+		return
+	}
+
 	key := "employees/" + id.String() + "_" + header.Filename
-	photoURL, err := h.r2.Upload(r.Context(), key, data, header.Filename)
+	photoURL, err := h.r2.Replace(r.Context(), emp.PhotoPath, key, data, header.Filename)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "upload failed: "+err.Error())
 		return
@@ -75,11 +81,7 @@ func (h *EmployeeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	emp, err := h.repo.GetByID(r.Context(), id)
-	if err != nil {
-		writeError(w, http.StatusNotFound, "karyawan tidak ditemukan")
-		return
-	}
+	emp.PhotoPath = photoURL
 	emp.PhotoURL = photoURL
 	writeJSON(w, http.StatusOK, emp)
 }

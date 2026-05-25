@@ -64,3 +64,27 @@ func (r *R2Client) Delete(ctx context.Context, key string) error {
 	})
 	return err
 }
+
+// KeyFromURL extracts the object key from a full R2 URL.
+// e.g. "https://.../fish-coldstorage/fish/abc.jpg" → "fish/abc.jpg"
+func (r *R2Client) KeyFromURL(photoURL string) string {
+	prefix := r.publicURL + "/"
+	if len(photoURL) > len(prefix) && photoURL[:len(prefix)] == prefix {
+		return photoURL[len(prefix):]
+	}
+	return ""
+}
+
+// Replace uploads a new file and deletes the old one if it exists.
+func (r *R2Client) Replace(ctx context.Context, oldURL, newKey string, data []byte, filename string) (string, error) {
+	newURL, err := r.Upload(ctx, newKey, data, filename)
+	if err != nil {
+		return "", err
+	}
+	if oldURL != "" {
+		if oldKey := r.KeyFromURL(oldURL); oldKey != "" {
+			_ = r.Delete(ctx, oldKey) // best-effort, don't fail on cleanup error
+		}
+	}
+	return newURL, nil
+}
