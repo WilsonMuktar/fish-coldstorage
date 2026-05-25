@@ -157,7 +157,15 @@ export default function AbsenPage() {
     pendingActionRef.current = null
   }
 
-  const handleLocalBatal = () => {
+  const handleLocalBuang = () => {
+    setShowLocalDialog(false)
+    const action = pendingActionRef.current
+    pendingActionRef.current = null
+    setIsDirty(false)
+    action?.()
+  }
+
+  const handleLocalTutup = () => {
     setShowLocalDialog(false)
     pendingActionRef.current = null
   }
@@ -293,15 +301,15 @@ export default function AbsenPage() {
       </Card>
 
       {/* Local dialog for in-page navigation (date / Scan QR / Laporan buttons) */}
-      <Dialog open={showLocalDialog} onOpenChange={(open) => { if (!open) handleLocalBatal() }}>
+      <Dialog open={showLocalDialog} onOpenChange={(open) => { if (!open) handleLocalTutup() }}>
         <DialogContent aria-describedby={undefined} className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Lupa simpan absensi?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Ada perubahan absensi yang belum disimpan.</p>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={handleLocalBatal} disabled={saving}>
-              Batal
+            <Button variant="outline" onClick={handleLocalBuang} disabled={saving}>
+              Buang &amp; Lanjut
             </Button>
             <Button onClick={handleLocalSimpan} disabled={saving} className="gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

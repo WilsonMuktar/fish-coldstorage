@@ -57,7 +57,14 @@ export function NavGuardProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const handleBatal = () => {
+  const handleBuang = () => {
+    guardRef.current = null
+    const dest = pending
+    setPending(null)
+    if (dest) router.push(dest)
+  }
+
+  const handleTutup = () => {
     setPending(null)
   }
 
@@ -65,15 +72,15 @@ export function NavGuardProvider({ children }: { children: React.ReactNode }) {
     <NavGuardContext.Provider value={{ setGuard, guardedNavigate }}>
       {children}
 
-      <Dialog open={!!pending} onOpenChange={(open) => { if (!open) handleBatal() }}>
+      <Dialog open={!!pending} onOpenChange={(open) => { if (!open) handleTutup() }}>
         <DialogContent aria-describedby={undefined} className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Lupa simpan absensi?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Ada perubahan absensi yang belum disimpan.</p>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={handleBatal} disabled={saving}>
-              Batal
+            <Button variant="outline" onClick={handleBuang} disabled={saving}>
+              Buang &amp; Lanjut
             </Button>
             <Button onClick={handleSimpan} disabled={saving} className="gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
