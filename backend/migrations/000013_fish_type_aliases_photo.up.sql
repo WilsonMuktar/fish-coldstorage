@@ -1,0 +1,2 @@
+ALTER TABLE fish_types ADD COLUMN IF NOT EXISTS aliases TEXT;
+ALTER TABLE fish_types ADD COLUMN IF NOT EXISTS photo_path TEXT;

@@ -1,0 +1,2 @@
+ALTER TABLE fish_types DROP COLUMN IF EXISTS aliases;
+ALTER TABLE fish_types DROP COLUMN IF EXISTS photo_path;
