@@ -1,11 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { navItems } from './nav-items'
+import { useNavGuard } from '@/contexts/nav-guard'
 import {
   LayoutDashboard,
   Fish,
@@ -54,6 +54,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const { guardedNavigate } = useNavGuard()
 
   useEffect(() => {
     const stored = localStorage.getItem('sidebar-collapsed')
@@ -139,11 +140,11 @@ export function Sidebar() {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                 return (
                   <li key={item.href}>
-                    <Link
-                      href={item.href}
+                    <button
+                      onClick={() => guardedNavigate(item.href)}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        'flex items-center rounded-lg text-sm font-medium transition-all duration-150',
+                        'w-full flex items-center rounded-lg text-sm font-medium transition-all duration-150',
                         collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2',
                         isActive ? 'text-white shadow-sm' : 'hover:text-white'
                       )}
@@ -161,7 +162,7 @@ export function Sidebar() {
                     >
                       <Icon className={cn('shrink-0', collapsed ? 'h-5 w-5' : 'h-4 w-4', isActive ? 'text-white' : 'text-cyan-400/70')} />
                       {!collapsed && item.label}
-                    </Link>
+                    </button>
                   </li>
                 )
               })}

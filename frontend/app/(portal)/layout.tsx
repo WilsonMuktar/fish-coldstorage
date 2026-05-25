@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { NavGuardProvider } from '@/contexts/nav-guard'
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -27,12 +28,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const title = pageTitles[pathname] || 'Management Portal'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={title} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+    <NavGuardProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header title={title} />
+          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </NavGuardProvider>
   )
 }
