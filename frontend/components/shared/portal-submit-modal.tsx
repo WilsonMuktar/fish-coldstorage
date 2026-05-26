@@ -15,7 +15,7 @@
  *   build the intent_data manually and submit to /v1/reviews/submit → redirect.
  */
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Dialog,
@@ -26,6 +26,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ocrAPI, portalSubmitAPI } from '@/lib/api'
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 import {
   Camera,
   FileText,
@@ -142,6 +144,17 @@ export function PortalSubmitModal({ open, onClose, defaultReceiptType, onCreated
   // Manual tab state
   const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10))
   const [manualRows, setManualRows] = useState<ManualRow[]>([{ key: '', value: '' }])
+
+  // Vessel list for dropdown
+  const [vessels, setVessels] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    fetch(`${BASE_URL}/v1/public/vessels`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(d => setVessels(d.data || []))
+      .catch(() => {})
+  }, [open])
 
   // Shared submit state
   const [submitting, setSubmitting] = useState(false)
@@ -390,24 +403,37 @@ export function PortalSubmitModal({ open, onClose, defaultReceiptType, onCreated
 
             {hints.length > 0 && (
               <div className="space-y-2">
-                {hints.map((h) => (
-                  <div key={h.placeholder}>
-                    <label className="text-xs font-medium mb-1 block" style={{ color: 'hsl(var(--muted-foreground))' }}>{h.label}</label>
-                    <Input
-                      placeholder={h.label}
-                      value={manualRows.find(r => r.key === h.placeholder)?.value || ''}
-                      onChange={(e) => setManualRows(prev => {
-                        const idx = prev.findIndex(r => r.key === h.placeholder)
-                        if (idx >= 0) {
-                          const next = [...prev]
-                          next[idx] = { ...next[idx], value: e.target.value }
-                          return next
-                        }
-                        return [...prev, { key: h.placeholder, value: e.target.value }]
-                      })}
-                    />
-                  </div>
-                ))}
+                {hints.map((h) => {
+                  const currentValue = manualRows.find(r => r.key === h.placeholder)?.value || ''
+                  const updateValue = (val: string) => setManualRows(prev => {
+                    const idx = prev.findIndex(r => r.key === h.placeholder)
+                    if (idx >= 0) { const next = [...prev]; next[idx] = { ...next[idx], value: val }; return next }
+                    return [...prev, { key: h.placeholder, value: val }]
+                  })
+                  return (
+                    <div key={h.placeholder}>
+                      <label className="text-xs font-medium mb-1 block" style={{ color: 'hsl(var(--muted-foreground))' }}>{h.label}</label>
+                      {h.placeholder === 'vessel_name' && vessels.length > 0 ? (
+                        <select
+                          value={currentValue}
+                          onChange={e => updateValue(e.target.value)}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">— Pilih Kapal —</option>
+                          {vessels.map(v => (
+                            <option key={v.id} value={v.name}>{v.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          placeholder={h.label}
+                          value={currentValue}
+                          onChange={e => updateValue(e.target.value)}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
 
