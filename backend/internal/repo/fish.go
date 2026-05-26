@@ -514,3 +514,36 @@ func (r *FishRepo) ListTimbanganRecords(ctx context.Context, limit, offset int) 
 	}
 	return out, rows.Err()
 }
+
+// ListUnlinkedTimbanganRecords returns timbangan not yet linked to any beli_ikan.
+func (r *FishRepo) ListUnlinkedTimbanganRecords(ctx context.Context) ([]domain.TimbanganRecord, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT tr.id, tr.receipt_id, COALESCE(rec.review_token,''),
+		        tr.vessel_id, tr.vessel_name, COALESCE(tr.transports,''),
+		        tr.timbang_date, tr.total_weight_kg, COALESCE(tr.fish_columns,'[]'::jsonb),
+		        COALESCE(tr.status,'approved'), tr.created_at
+		 FROM timbangan_records tr
+		 LEFT JOIN receipts rec ON rec.id = tr.receipt_id
+		 WHERE NOT EXISTS (
+		   SELECT 1 FROM beli_ikan_timbangan_links l WHERE l.timbangan_id = tr.id
+		 )
+		 ORDER BY tr.timbang_date DESC, tr.created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.TimbanganRecord
+	for rows.Next() {
+		var t domain.TimbanganRecord
+		if err := rows.Scan(&t.ID, &t.ReceiptID, &t.ReviewToken,
+			&t.VesselID, &t.VesselName, &t.Transports,
+			&t.TimbangDate, &t.TotalWeightKg, &t.FishColumns, &t.Status, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		t.TransportNumber = t.Transports
+		t.WeighDate = t.TimbangDate.Format("2006-01-02")
+		t.TotalKg = t.TotalWeightKg
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}

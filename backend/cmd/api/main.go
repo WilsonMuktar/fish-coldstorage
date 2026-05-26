@@ -134,6 +134,7 @@ func main() {
 		// Additional public read endpoints for bot queries (read-only, no sensitive data)
 		r.Get("/v1/public/transactions", fishH.ListTransactions)
 		r.Get("/v1/public/timbangan", fishH.ListTimbangan)
+		r.Get("/v1/public/timbangan/unlinked", fishH.ListUnlinkedTimbangan)
 		r.Get("/v1/public/dashboard", dashboardH.Stats)
 		r.Get("/v1/public/expenses", expenseH.List)
 		r.Get("/v1/public/beli-ikan", beliIkanH.List)

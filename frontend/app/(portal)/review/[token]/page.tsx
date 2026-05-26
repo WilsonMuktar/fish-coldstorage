@@ -208,6 +208,17 @@ export default function ReviewPage() {
   const [beliIkanNotes, setBeliIkanNotes] = useState('')
   const [beliIkanItems, setBeliIkanItems] = useState<Array<{ fish_code: string; quantity_kg: string; price_per_kg: string }>>([])
 
+  // Unlinked timbangan for beli_ikan picker
+  interface UnlinkedTimbangan {
+    id: string
+    vessel_name: string
+    weigh_date: string
+    total_kg: number
+    fish_columns: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }>
+  }
+  const [unlinkedTimbangan, setUnlinkedTimbangan] = useState<UnlinkedTimbangan[]>([])
+  const [selectedTimbanganIds, setSelectedTimbanganIds] = useState<string[]>([])
+
   // Expense (beli_item / bayar_jasa) fields
   const [expenseDate, setExpenseDate] = useState('')
   const [expenseDescription, setExpenseDescription] = useState('')
@@ -223,6 +234,10 @@ export default function ReviewPage() {
     fetch(`${BASE_URL}/v1/public/fish-types?is_sorted=true`)
       .then(r => r.ok ? r.json() : { data: [] })
       .then(d => setSortedFishTypes((d.data || []) as { code: string; name: string; source_fish_type_code: string; grade: string }[]))
+      .catch(() => {})
+    fetch(`${BASE_URL}/v1/public/timbangan/unlinked`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(d => setUnlinkedTimbangan((d.data || []) as UnlinkedTimbangan[]))
       .catch(() => {})
   }, [])
 
@@ -335,10 +350,11 @@ export default function ReviewPage() {
     } else if (d.receipt_type === 'invoice') {
       // Invoice not yet sent by bot — leave blank
     } else if (d.receipt_type === 'beli_ikan') {
-      const b = (effective as { beli_ikan?: { vessel_name?: string; date?: string; notes?: string; items?: Array<{ fish_code?: string; quantity_kg?: number; price_per_kg?: number }> } })?.beli_ikan
+      const b = (effective as { beli_ikan?: { vessel_name?: string; date?: string; notes?: string; timbangan_ids?: string[]; items?: Array<{ fish_code?: string; quantity_kg?: number; price_per_kg?: number }> } })?.beli_ikan
       setBeliIkanVessel(b?.vessel_name || '')
       setBeliIkanDate(b?.date || '')
       setBeliIkanNotes(b?.notes || '')
+      setSelectedTimbanganIds(b?.timbangan_ids || [])
       setBeliIkanItems((b?.items || []).map(it => ({
         fish_code: it.fish_code || '',
         quantity_kg: String(it.quantity_kg || 0),
@@ -435,7 +451,7 @@ export default function ReviewPage() {
           vessel_name: beliIkanVessel,
           date: beliIkanDate,
           notes: beliIkanNotes,
-          timbangan_ids: [],
+          timbangan_ids: selectedTimbanganIds,
           items: beliIkanItems.map(it => ({
             fish_code: it.fish_code,
             quantity_kg: parseFloat(it.quantity_kg) || 0,
@@ -1617,6 +1633,91 @@ export default function ReviewPage() {
             {/* BELI IKAN */}
             {data.receipt_type === 'beli_ikan' && (
               <>
+                {/* Timbangan picker */}
+                <div className="space-y-2">
+                  <Label className="text-xs">Pilih Timbangan Ikan</Label>
+                  {isAlreadyProcessed ? (
+                    selectedTimbanganIds.length > 0 ? (
+                      <div className="text-xs text-muted-foreground">
+                        {selectedTimbanganIds.length} timbangan terhubung
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">Tidak ada timbangan terhubung</div>
+                    )
+                  ) : unlinkedTimbangan.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground text-center">
+                      Semua timbangan sudah terhubung ke bon beli ikan
+                    </div>
+                  ) : (
+                    <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
+                      {unlinkedTimbangan.map(t => {
+                        const selected = selectedTimbanganIds.includes(t.id)
+                        return (
+                          <label key={t.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40 ${selected ? 'bg-cyan-50' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => {
+                                const next = selected
+                                  ? selectedTimbanganIds.filter(id => id !== t.id)
+                                  : [...selectedTimbanganIds, t.id]
+                                setSelectedTimbanganIds(next)
+                                // Auto-fill vessel, date, items from selected timbangan
+                                const cols: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }> =
+                                  typeof t.fish_columns === 'string' ? JSON.parse(t.fish_columns) : (t.fish_columns || [])
+                                if (!selected) {
+                                  // adding — use first selected timbangan for vessel/date
+                                  if (next.length === 1) {
+                                    setBeliIkanVessel(t.vessel_name)
+                                    setBeliIkanDate(t.weigh_date)
+                                  }
+                                  // merge items — add new fish codes or accumulate qty
+                                  setBeliIkanItems(prev => {
+                                    const merged = [...prev]
+                                    cols.forEach(col => {
+                                      const code = col.fish_type_code || col.fish_code || ''
+                                      const qty = col.quantity_kg ?? col.total_weight ?? 0
+                                      const existing = merged.findIndex(i => i.fish_code === code)
+                                      if (existing >= 0) {
+                                        merged[existing] = { ...merged[existing], quantity_kg: String((parseFloat(merged[existing].quantity_kg) || 0) + qty) }
+                                      } else {
+                                        merged.push({ fish_code: code, quantity_kg: String(qty), price_per_kg: '0' })
+                                      }
+                                    })
+                                    return merged
+                                  })
+                                } else {
+                                  // removing — subtract this timbangan's quantities
+                                  setBeliIkanItems(prev => {
+                                    const merged = [...prev]
+                                    cols.forEach(col => {
+                                      const code = col.fish_type_code || col.fish_code || ''
+                                      const qty = col.quantity_kg ?? col.total_weight ?? 0
+                                      const existing = merged.findIndex(i => i.fish_code === code)
+                                      if (existing >= 0) {
+                                        const newQty = (parseFloat(merged[existing].quantity_kg) || 0) - qty
+                                        if (newQty <= 0) merged.splice(existing, 1)
+                                        else merged[existing] = { ...merged[existing], quantity_kg: String(newQty) }
+                                      }
+                                    })
+                                    return merged
+                                  })
+                                  if (next.length === 0) { setBeliIkanVessel(''); setBeliIkanDate('') }
+                                }
+                              }}
+                              className="accent-cyan-600"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs truncate">{t.vessel_name || '—'}</p>
+                              <p className="text-[11px] text-muted-foreground">{t.weigh_date} · {t.total_kg?.toLocaleString('id-ID')} kg</p>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Nama Kapal</Label>
@@ -1632,7 +1733,7 @@ export default function ReviewPage() {
                   <Input value={beliIkanNotes} onChange={e => setBeliIkanNotes(e.target.value)} className="h-9" disabled={isAlreadyProcessed} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Daftar Ikan</Label>
+                  <Label className="text-xs">Daftar Ikan <span className="text-muted-foreground font-normal">(qty dari timbangan · isi harga/kg)</span></Label>
                   <div className="rounded-md border overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
@@ -1669,7 +1770,7 @@ export default function ReviewPage() {
                   {!isAlreadyProcessed && (
                     <Button type="button" variant="outline" size="sm" className="w-full text-xs"
                       onClick={() => setBeliIkanItems(prev => [...prev, { fish_code: '', quantity_kg: '0', price_per_kg: '0' }])}>
-                      + Tambah Baris
+                      + Tambah Baris Manual
                     </Button>
                   )}
                 </div>

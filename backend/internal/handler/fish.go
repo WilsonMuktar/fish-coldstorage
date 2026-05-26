@@ -466,3 +466,12 @@ func (h *FishHandler) ListTimbangan(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, domain.ListResponse{Data: recs, Total: len(recs), Limit: limit})
 }
 
+func (h *FishHandler) ListUnlinkedTimbangan(w http.ResponseWriter, r *http.Request) {
+	recs, err := h.repo.ListUnlinkedTimbanganRecords(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, domain.ListResponse{Data: recs, Total: len(recs)})
+}
+
