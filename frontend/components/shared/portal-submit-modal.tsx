@@ -147,6 +147,8 @@ export function PortalSubmitModal({ open, onClose, defaultReceiptType, onCreated
 
   // Vessel list for dropdown
   const [vessels, setVessels] = useState<{ id: string; name: string }[]>([])
+  // Vendor/customer lists keyed by receipt type
+  const [vendorMap, setVendorMap] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
     if (!open) return
@@ -154,6 +156,13 @@ export function PortalSubmitModal({ open, onClose, defaultReceiptType, onCreated
       .then(r => r.ok ? r.json() : { data: [] })
       .then(d => setVessels(d.data || []))
       .catch(() => {})
+    // Pre-fetch vendor lists for both bon types
+    ;['bon_penjualan', 'bon_pengeluaran'].forEach(type => {
+      fetch(`${BASE_URL}/v1/public/vendors?type=${type}`)
+        .then(r => r.ok ? r.json() : { data: [] })
+        .then(d => setVendorMap(prev => ({ ...prev, [type]: d.data || [] })))
+        .catch(() => {})
+    })
   }, [open])
 
   // Shared submit state
@@ -424,6 +433,20 @@ export function PortalSubmitModal({ open, onClose, defaultReceiptType, onCreated
                             <option key={v.id} value={v.name}>{v.name}</option>
                           ))}
                         </select>
+                      ) : h.placeholder === 'vendor_name' && (vendorMap[receiptType] || []).length > 0 ? (
+                        <>
+                          <Input
+                            list={`vendor-list-${receiptType}`}
+                            placeholder={h.label}
+                            value={currentValue}
+                            onChange={e => updateValue(e.target.value)}
+                          />
+                          <datalist id={`vendor-list-${receiptType}`}>
+                            {(vendorMap[receiptType] || []).map(name => (
+                              <option key={name} value={name} />
+                            ))}
+                          </datalist>
+                        </>
                       ) : (
                         <Input
                           placeholder={h.label}

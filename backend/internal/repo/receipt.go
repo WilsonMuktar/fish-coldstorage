@@ -158,3 +158,28 @@ func (r *ReceiptRepo) UpdateImagePath(ctx context.Context, token, imagePath stri
 	_, err := r.db.Exec(ctx, `UPDATE receipts SET image_path=$1 WHERE review_token=$2`, imagePath, token)
 	return err
 }
+
+// ListVendorNames returns distinct vendor_name values from approved receipts of the given type.
+func (r *ReceiptRepo) ListVendorNames(ctx context.Context, receiptType string) ([]string, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT DISTINCT confirmed_data->'receipt'->>'vendor_name'
+		FROM receipts
+		WHERE receipt_type = $1
+		  AND status = 'approved'
+		  AND confirmed_data->'receipt'->>'vendor_name' IS NOT NULL
+		  AND confirmed_data->'receipt'->>'vendor_name' != ''
+		ORDER BY 1`, receiptType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			continue
+		}
+		out = append(out, name)
+	}
+	return out, rows.Err()
+}

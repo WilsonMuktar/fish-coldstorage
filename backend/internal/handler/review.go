@@ -126,6 +126,20 @@ func (h *ReviewHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "rejected"})
 }
 
+// GET /v1/public/vendors?type=bon_penjualan|bon_pengeluaran
+func (h *ReviewHandler) ListVendors(w http.ResponseWriter, r *http.Request) {
+	receiptType := r.URL.Query().Get("type")
+	if receiptType == "" {
+		receiptType = "bon_pengeluaran"
+	}
+	names, err := h.receiptRepo.ListVendorNames(r.Context(), receiptType)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"data": names})
+}
+
 // GET /v1/reviews — list receipts (authenticated)
 func (h *ReviewHandler) List(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
