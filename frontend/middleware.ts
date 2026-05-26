@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   const isAuthPage = pathname.startsWith('/login') || pathname === '/(auth)/login'
-  const isPublic = isAuthPage
+  const isPublic = isAuthPage || pathname === '/'
 
   if (!isPublic && !token) {
     return NextResponse.redirect(new URL('/login', request.url))
