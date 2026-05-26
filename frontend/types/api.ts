@@ -355,6 +355,11 @@ export interface BeliIkanItem {
   total_amount: number
 }
 
+export interface TimbanganFishSummary {
+  fish_code: string
+  timbangan_kg: number
+}
+
 export interface BeliIkanRecord {
   id: string
   receipt_id?: string
@@ -365,5 +370,6 @@ export interface BeliIkanRecord {
   total_amount: number
   items: BeliIkanItem[]
   timbangan_ids?: string[]
+  timbangan_items?: TimbanganFishSummary[]
   created_at: string
 }

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -463,7 +464,7 @@ func (r *FishRepo) CreateTimbanganRecord(ctx context.Context, t *domain.Timbanga
 	t.ReceiptID = uuid.New() // placeholder receipt for manually-created records
 	t.CreatedAt = time.Now()
 	if t.FishColumns == nil {
-		t.FishColumns = []byte("[]")
+		t.FishColumns = json.RawMessage("[]")
 	}
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO timbangan_records(id, receipt_id, vessel_id, vessel_name, transports, timbang_date, total_weight_kg, fish_columns)
@@ -477,7 +478,7 @@ func (r *FishRepo) InsertTimbanganRecord(ctx context.Context, t *domain.Timbanga
 	t.ID = uuid.New()
 	t.CreatedAt = time.Now()
 	if t.FishColumns == nil {
-		t.FishColumns = []byte("[]")
+		t.FishColumns = json.RawMessage("[]")
 	}
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO timbangan_records(id, receipt_id, vessel_id, vessel_name, transports, timbang_date, total_weight_kg, fish_columns)

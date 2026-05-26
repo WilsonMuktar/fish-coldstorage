@@ -202,7 +202,7 @@ type TimbanganRecord struct {
 	WeighDate       string     `json:"weigh_date"`       // formatted date for frontend
 	TotalWeightKg   float64    `json:"total_weight_kg"`
 	TotalKg         float64    `json:"total_kg"`         // alias for frontend
-	FishColumns     []byte     `json:"fish_columns"`     // JSONB
+	FishColumns     json.RawMessage `json:"fish_columns"` // JSONB — must be RawMessage, not []byte ([]byte → base64)
 	Status          string     `json:"status"`
 	CreatedBy       string     `json:"created_by"`
 	CreatedAt       time.Time  `json:"created_at"`
@@ -426,17 +426,24 @@ type BeliIkanItem struct {
 	TotalAmount float64    `json:"total_amount"`
 }
 
+// TimbanganFishSummary is one row in the per-fish timbangan vs beli-ikan comparison.
+type TimbanganFishSummary struct {
+	FishCode    string  `json:"fish_code"`
+	TimbanganKg float64 `json:"timbangan_kg"` // total from linked timbangan records
+}
+
 type BeliIkanRecord struct {
-	ID           uuid.UUID      `json:"id"`
-	ReceiptID    *uuid.UUID     `json:"receipt_id,omitempty"`
-	VesselID     *uuid.UUID     `json:"vessel_id,omitempty"`
-	VesselName   string         `json:"vessel_name"`
-	BuyDate      time.Time      `json:"buy_date"`
-	Notes        string         `json:"notes,omitempty"`
-	TotalAmount  float64        `json:"total_amount"`
-	Items        []BeliIkanItem `json:"items"`
-	TimbanganIDs []uuid.UUID    `json:"timbangan_ids,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
+	ID              uuid.UUID             `json:"id"`
+	ReceiptID       *uuid.UUID            `json:"receipt_id,omitempty"`
+	VesselID        *uuid.UUID            `json:"vessel_id,omitempty"`
+	VesselName      string                `json:"vessel_name"`
+	BuyDate         time.Time             `json:"buy_date"`
+	Notes           string                `json:"notes,omitempty"`
+	TotalAmount     float64               `json:"total_amount"`
+	Items           []BeliIkanItem        `json:"items"`
+	TimbanganIDs    []uuid.UUID           `json:"timbangan_ids,omitempty"`
+	TimbanganItems  []TimbanganFishSummary `json:"timbangan_items,omitempty"` // per-fish kg from linked timbangan
+	CreatedAt       time.Time             `json:"created_at"`
 }
 
 type ProfitLossStats struct {

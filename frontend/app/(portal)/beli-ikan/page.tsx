@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { beliIkanAPI, fishAPI } from '@/lib/api'
-import { BeliIkanRecord, BeliIkanItem, Vessel, TimbanganRecord } from '@/types/api'
+import { BeliIkanRecord, BeliIkanItem, Vessel, TimbanganRecord, TimbanganFishSummary } from '@/types/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -348,8 +348,9 @@ export default function BeliIkanPage() {
                     </div>
                   </button>
 
-                  {expanded && rec.items && rec.items.length > 0 && (
-                    <div className="px-4 pb-3">
+                  {expanded && (
+                    <div className="px-4 pb-4 space-y-3">
+                      {/* Purchase detail */}
                       <table className="w-full text-xs">
                         <thead>
                           <tr style={{ color: 'hsl(var(--muted-foreground))' }}>
@@ -360,7 +361,7 @@ export default function BeliIkanPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {rec.items.map((it, i) => (
+                          {(rec.items || []).map((it, i) => (
                             <tr key={i} style={{ color: 'hsl(var(--foreground))' }}>
                               <td className="py-0.5">{it.fish_code}</td>
                               <td className="text-right py-0.5">{it.quantity_kg.toFixed(1)}</td>
@@ -370,6 +371,57 @@ export default function BeliIkanPage() {
                           ))}
                         </tbody>
                       </table>
+
+                      {/* Timbangan vs Beli comparison — only shown if timbangan linked */}
+                      {rec.timbangan_items && rec.timbangan_items.length > 0 && (() => {
+                        // Merge by fish_code
+                        const allCodes = Array.from(new Set([
+                          ...rec.timbangan_items.map(t => t.fish_code),
+                          ...(rec.items || []).map(i => i.fish_code),
+                        ]))
+                        const timMap: Record<string, number> = {}
+                        rec.timbangan_items.forEach(t => { timMap[t.fish_code] = (timMap[t.fish_code] || 0) + t.timbangan_kg })
+                        const beliMap: Record<string, number> = {}
+                        ;(rec.items || []).forEach(i => { beliMap[i.fish_code] = (beliMap[i.fish_code] || 0) + i.quantity_kg })
+
+                        return (
+                          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid hsl(var(--border))' }}>
+                            <div className="px-3 py-1.5 text-[11px] font-semibold" style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
+                              Perbandingan Timbangan vs Beli Ikan
+                            </div>
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr style={{ color: 'hsl(var(--muted-foreground))', borderBottom: '1px solid hsl(var(--border))' }}>
+                                  <th className="text-left px-3 py-1.5 font-medium">Kode Ikan</th>
+                                  <th className="text-right px-3 py-1.5 font-medium">Timbangan (kg)</th>
+                                  <th className="text-right px-3 py-1.5 font-medium">Beli Ikan (kg)</th>
+                                  <th className="text-right px-3 py-1.5 font-medium">Selisih</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {allCodes.map(code => {
+                                  const timKg = timMap[code] ?? 0
+                                  const beliKg = beliMap[code] ?? 0
+                                  const diff = beliKg - timKg
+                                  const diffColor = diff === 0
+                                    ? 'hsl(var(--muted-foreground))'
+                                    : diff > 0 ? '#f59e0b' : '#f87171'
+                                  return (
+                                    <tr key={code} style={{ color: 'hsl(var(--foreground))', borderTop: '1px solid hsl(var(--border))' }}>
+                                      <td className="px-3 py-1.5">{code || '—'}</td>
+                                      <td className="text-right px-3 py-1.5">{timKg > 0 ? timKg.toFixed(1) : '—'}</td>
+                                      <td className="text-right px-3 py-1.5">{beliKg > 0 ? beliKg.toFixed(1) : '—'}</td>
+                                      <td className="text-right px-3 py-1.5 font-semibold" style={{ color: diffColor }}>
+                                        {diff === 0 ? '=' : (diff > 0 ? '+' : '') + diff.toFixed(1)}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>

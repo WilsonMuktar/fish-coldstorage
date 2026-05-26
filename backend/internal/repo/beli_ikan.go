@@ -80,6 +80,31 @@ func (r *BeliIkanRepo) List(ctx context.Context, limit, offset int) ([]domain.Be
 			out[i].Items = append(out[i].Items, item)
 		}
 		irows.Close()
+
+		// Load per-fish kg from linked timbangan records (jsonb fish_columns aggregation)
+		trows, err := r.db.Query(ctx, `
+			SELECT
+				COALESCE(col->>'fish_type_code', col->>'fish_code', '') AS fish_code,
+				COALESCE((col->>'quantity_kg')::numeric, (col->>'total_weight')::numeric, 0) AS kg
+			FROM beli_ikan_timbangan_links btl
+			JOIN timbangan_records tr ON tr.id = btl.timbangan_id
+			JOIN LATERAL jsonb_array_elements(COALESCE(tr.fish_columns,'[]'::jsonb)) AS col ON true
+			WHERE btl.beli_ikan_id = $1
+			  AND COALESCE(col->>'fish_type_code', col->>'fish_code', '') != ''`, out[i].ID)
+		if err == nil {
+			aggr := map[string]float64{}
+			for trows.Next() {
+				var code string
+				var kg float64
+				if err2 := trows.Scan(&code, &kg); err2 == nil && code != "" {
+					aggr[code] += kg
+				}
+			}
+			trows.Close()
+			for code, kg := range aggr {
+				out[i].TimbanganItems = append(out[i].TimbanganItems, domain.TimbanganFishSummary{FishCode: code, TimbanganKg: kg})
+			}
+		}
 	}
 	return out, nil
 }

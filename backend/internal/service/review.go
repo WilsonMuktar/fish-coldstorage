@@ -262,7 +262,7 @@ func (s *ReviewService) processTimbangan(ctx context.Context, rec *domain.Receip
 	// Marshal fish_columns back to JSONB for the timbangan_record
 	fishColumnsJSON, err := json.Marshal(t.FishColumns)
 	if err != nil {
-		fishColumnsJSON = []byte("[]")
+		fishColumnsJSON = json.RawMessage("[]")
 	}
 
 	timRec := &domain.TimbanganRecord{
@@ -272,7 +272,7 @@ func (s *ReviewService) processTimbangan(ctx context.Context, rec *domain.Receip
 		Transports:    t.Transports,
 		TimbangDate:   txDate,
 		TotalWeightKg: totalKg,
-		FishColumns:   fishColumnsJSON,
+		FishColumns:   json.RawMessage(fishColumnsJSON),
 	}
 	if err := s.fishRepo.InsertTimbanganRecord(ctx, timRec); err != nil {
 		return fmt.Errorf("insert timbangan record: %w", err)

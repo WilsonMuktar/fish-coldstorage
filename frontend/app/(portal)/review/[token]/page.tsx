@@ -214,7 +214,7 @@ export default function ReviewPage() {
     vessel_name: string
     weigh_date: string
     total_kg: number
-    fish_columns: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }>
+    fish_columns: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }> | string
   }
   const [unlinkedTimbangan, setUnlinkedTimbangan] = useState<UnlinkedTimbangan[]>([])
   const [selectedTimbanganIds, setSelectedTimbanganIds] = useState<string[]>([])
@@ -1644,77 +1644,55 @@ export default function ReviewPage() {
                     ) : (
                       <div className="text-xs text-muted-foreground">Tidak ada timbangan terhubung</div>
                     )
-                  ) : unlinkedTimbangan.length === 0 ? (
-                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground text-center">
-                      Semua timbangan sudah terhubung ke bon beli ikan
-                    </div>
                   ) : (
-                    <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
-                      {unlinkedTimbangan.map(t => {
-                        const selected = selectedTimbanganIds.includes(t.id)
-                        return (
-                          <label key={t.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40 ${selected ? 'bg-cyan-50' : ''}`}>
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              onChange={() => {
-                                const next = selected
-                                  ? selectedTimbanganIds.filter(id => id !== t.id)
-                                  : [...selectedTimbanganIds, t.id]
-                                setSelectedTimbanganIds(next)
-                                // Auto-fill vessel, date, items from selected timbangan
-                                const cols: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }> =
-                                  typeof t.fish_columns === 'string' ? JSON.parse(t.fish_columns) : (t.fish_columns || [])
-                                if (!selected) {
-                                  // adding — use first selected timbangan for vessel/date
-                                  if (next.length === 1) {
-                                    setBeliIkanVessel(t.vessel_name)
-                                    setBeliIkanDate(t.weigh_date)
-                                  }
-                                  // merge items — add new fish codes or accumulate qty
-                                  setBeliIkanItems(prev => {
-                                    const merged = [...prev]
-                                    cols.forEach(col => {
-                                      const code = col.fish_type_code || col.fish_code || ''
-                                      const qty = col.quantity_kg ?? col.total_weight ?? 0
-                                      const existing = merged.findIndex(i => i.fish_code === code)
-                                      if (existing >= 0) {
-                                        merged[existing] = { ...merged[existing], quantity_kg: String((parseFloat(merged[existing].quantity_kg) || 0) + qty) }
-                                      } else {
-                                        merged.push({ fish_code: code, quantity_kg: String(qty), price_per_kg: '0' })
-                                      }
-                                    })
-                                    return merged
-                                  })
-                                } else {
-                                  // removing — subtract this timbangan's quantities
-                                  setBeliIkanItems(prev => {
-                                    const merged = [...prev]
-                                    cols.forEach(col => {
-                                      const code = col.fish_type_code || col.fish_code || ''
-                                      const qty = col.quantity_kg ?? col.total_weight ?? 0
-                                      const existing = merged.findIndex(i => i.fish_code === code)
-                                      if (existing >= 0) {
-                                        const newQty = (parseFloat(merged[existing].quantity_kg) || 0) - qty
-                                        if (newQty <= 0) merged.splice(existing, 1)
-                                        else merged[existing] = { ...merged[existing], quantity_kg: String(newQty) }
-                                      }
-                                    })
-                                    return merged
-                                  })
-                                  if (next.length === 0) { setBeliIkanVessel(''); setBeliIkanDate('') }
-                                }
-                              }}
-                              className="accent-cyan-600"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs truncate">{t.vessel_name || '—'}</p>
-                              <p className="text-[11px] text-muted-foreground">{t.weigh_date} · {t.total_kg?.toLocaleString('id-ID')} kg</p>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={selectedTimbanganIds[0] || ''}
+                      onChange={e => {
+                        const id = e.target.value
+                        if (!id) {
+                          setSelectedTimbanganIds([])
+                          setBeliIkanVessel('')
+                          setBeliIkanDate('')
+                          setBeliIkanItems([{ fish_code: '', quantity_kg: '', price_per_kg: '' }])
+                          return
+                        }
+                        const t = unlinkedTimbangan.find(x => x.id === id)
+                        if (!t) return
+                        setSelectedTimbanganIds([id])
+                        setBeliIkanVessel(t.vessel_name)
+                        setBeliIkanDate(t.weigh_date)
+                        // Parse fish_columns safely — may be JSON array or base64 string
+                        let cols: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }> = []
+                        try {
+                          if (Array.isArray(t.fish_columns)) {
+                            cols = t.fish_columns
+                          } else if (typeof t.fish_columns === 'string') {
+                            const str = t.fish_columns.trim()
+                            if (str.startsWith('[') || str.startsWith('{')) {
+                              cols = JSON.parse(str)
+                            }
+                            // else: base64 from old deploy — skip, items stay empty
+                          }
+                        } catch { cols = [] }
+                        if (cols.length > 0) {
+                          setBeliIkanItems(cols.map(col => ({
+                            fish_code: col.fish_type_code || col.fish_code || '',
+                            quantity_kg: String(col.quantity_kg ?? col.total_weight ?? 0),
+                            price_per_kg: String(col.price_per_kg ?? 0),
+                          })))
+                        } else {
+                          setBeliIkanItems([{ fish_code: '', quantity_kg: '', price_per_kg: '' }])
+                        }
+                      }}
+                    >
+                      <option value="">— Pilih Timbangan —</option>
+                      {unlinkedTimbangan.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.vessel_name || '?'} · {t.weigh_date} · {t.total_kg?.toLocaleString('id-ID')} kg
+                        </option>
+                      ))}
+                    </select>
                   )}
                 </div>
 
