@@ -1736,9 +1736,13 @@ export default function ReviewPage() {
                       </tbody>
                       <tfoot className="border-t bg-gray-50">
                         <tr>
-                          <td colSpan={3} className="p-2 text-right font-medium">Grand Total:</td>
+                          <td className="p-2 text-right font-medium">Grand Total:</td>
                           <td className="p-2 text-right font-mono font-semibold">
-                            {formatIDR(beliIkanItems.reduce((s,it)=>(parseFloat(it.quantity_kg)||0)*(parseFloat(it.price_per_kg)||0)+s,0))}
+                            {beliIkanItems.reduce((s,it)=>s+(parseFloat(it.quantity_kg)||0),0).toLocaleString('id-ID', {maximumFractionDigits:1})} kg
+                          </td>
+                          <td></td>
+                          <td className="p-2 text-right font-mono font-semibold">
+                            {formatIDR(beliIkanItems.reduce((s,it)=>s+(parseFloat(it.quantity_kg)||0)*(parseFloat(it.price_per_kg)||0),0))}
                           </td>
                           <td></td>
                         </tr>
