@@ -516,8 +516,8 @@ func (r *FishRepo) ListTimbanganRecords(ctx context.Context, limit, offset int) 
 	return out, rows.Err()
 }
 
-// ListUnlinkedTimbanganRecords returns timbangan not yet linked to any beli_ikan.
-func (r *FishRepo) ListUnlinkedTimbanganRecords(ctx context.Context) ([]domain.TimbanganRecord, error) {
+// ListTimbanganForPicker returns all timbangan for the beli_ikan picker (many-to-many allowed).
+func (r *FishRepo) ListTimbanganForPicker(ctx context.Context) ([]domain.TimbanganRecord, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT tr.id, tr.receipt_id, COALESCE(rec.review_token,''),
 		        tr.vessel_id, tr.vessel_name, COALESCE(tr.transports,''),
@@ -525,9 +525,6 @@ func (r *FishRepo) ListUnlinkedTimbanganRecords(ctx context.Context) ([]domain.T
 		        COALESCE(tr.status,'approved'), tr.created_at
 		 FROM timbangan_records tr
 		 LEFT JOIN receipts rec ON rec.id = tr.receipt_id
-		 WHERE NOT EXISTS (
-		   SELECT 1 FROM beli_ikan_timbangan_links l WHERE l.timbangan_id = tr.id
-		 )
 		 ORDER BY tr.timbang_date DESC, tr.created_at DESC`)
 	if err != nil {
 		return nil, err

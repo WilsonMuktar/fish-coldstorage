@@ -467,7 +467,7 @@ func (h *FishHandler) ListTimbangan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FishHandler) ListUnlinkedTimbangan(w http.ResponseWriter, r *http.Request) {
-	recs, err := h.repo.ListUnlinkedTimbanganRecords(r.Context())
+	recs, err := h.repo.ListTimbanganForPicker(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
