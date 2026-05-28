@@ -522,7 +522,9 @@ func (r *FishRepo) ListTimbanganForPicker(ctx context.Context) ([]domain.Timbang
 		`SELECT tr.id, tr.receipt_id, COALESCE(rec.review_token,''),
 		        tr.vessel_id, tr.vessel_name, COALESCE(tr.transports,''),
 		        tr.timbang_date, tr.total_weight_kg, COALESCE(tr.fish_columns,'[]'::jsonb),
-		        COALESCE(tr.status,'approved'), tr.created_at
+		        COALESCE(tr.status,'approved'),
+		        (SELECT COUNT(*) FROM beli_ikan_timbangan_links l WHERE l.timbangan_id = tr.id)::int AS linked_count,
+		        tr.created_at
 		 FROM timbangan_records tr
 		 LEFT JOIN receipts rec ON rec.id = tr.receipt_id
 		 ORDER BY tr.timbang_date DESC, tr.created_at DESC`)
@@ -535,7 +537,7 @@ func (r *FishRepo) ListTimbanganForPicker(ctx context.Context) ([]domain.Timbang
 		var t domain.TimbanganRecord
 		if err := rows.Scan(&t.ID, &t.ReceiptID, &t.ReviewToken,
 			&t.VesselID, &t.VesselName, &t.Transports,
-			&t.TimbangDate, &t.TotalWeightKg, &t.FishColumns, &t.Status, &t.CreatedAt); err != nil {
+			&t.TimbangDate, &t.TotalWeightKg, &t.FishColumns, &t.Status, &t.LinkedCount, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		t.TransportNumber = t.Transports

@@ -204,6 +204,7 @@ type TimbanganRecord struct {
 	TotalKg         float64    `json:"total_kg"`         // alias for frontend
 	FishColumns     json.RawMessage `json:"fish_columns"` // JSONB — must be RawMessage, not []byte ([]byte → base64)
 	Status          string     `json:"status"`
+	LinkedCount     int        `json:"linked_count"`  // how many beli_ikan records reference this timbangan
 	CreatedBy       string     `json:"created_by"`
 	CreatedAt       time.Time  `json:"created_at"`
 }

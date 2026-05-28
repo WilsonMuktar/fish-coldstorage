@@ -215,6 +215,7 @@ export default function ReviewPage() {
     weigh_date: string
     total_kg: number
     fish_columns: Array<{ fish_type_code?: string; fish_code?: string; quantity_kg?: number; total_weight?: number; price_per_kg?: number }> | string
+    linked_count: number
   }
   const [unlinkedTimbangan, setUnlinkedTimbangan] = useState<UnlinkedTimbangan[]>([])
   const [selectedTimbanganIds, setSelectedTimbanganIds] = useState<string[]>([])
@@ -1719,6 +1720,11 @@ export default function ReviewPage() {
                               <p className="text-xs font-medium truncate">{t.vessel_name || '—'}</p>
                               <p className="text-[11px] text-muted-foreground">{t.weigh_date} · {t.total_kg?.toLocaleString('id-ID')} kg</p>
                             </div>
+                            {t.linked_count > 0 && (
+                              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium bg-cyan-900/40 text-cyan-300 border border-cyan-700/40">
+                                {t.linked_count} beli ikan
+                              </span>
+                            )}
                           </label>
                         )
                       })}
