@@ -216,12 +216,15 @@ func (r *FishRepo) ListStock(ctx context.Context) ([]domain.FishStockSummary, er
 		),
 		sorted_stock AS (
 			SELECT
-				COALESCE(ft.source_fish_type_id, ft.canonical_fish_type_id) AS source_id,
+				-- resolve source_fish_type_id through its own canonical so alias-source
+				-- rows still map back to the canonical display row
+				COALESCE(src.canonical_fish_type_id, ft.source_fish_type_id, ft.canonical_fish_type_id) AS source_id,
 				COALESCE(SUM(fs.quantity), 0) AS sorted_qty
 			FROM fish_types ft
 			LEFT JOIN fish_stock fs ON fs.fish_type_id = ft.id
+			LEFT JOIN fish_types src ON src.id = ft.source_fish_type_id
 			WHERE ft.is_sorted = true
-			GROUP BY COALESCE(ft.source_fish_type_id, ft.canonical_fish_type_id)
+			GROUP BY COALESCE(src.canonical_fish_type_id, ft.source_fish_type_id, ft.canonical_fish_type_id)
 		),
 		sold AS (
 			SELECT
@@ -288,7 +291,7 @@ func (r *FishRepo) StockTotals(ctx context.Context) (rawKg, sortedKg float64, er
 		SELECT COALESCE(ft.is_sorted, false), COALESCE(SUM(fs.quantity), 0)
 		FROM fish_types ft
 		LEFT JOIN fish_stock fs ON fs.fish_type_id = ft.id
-		WHERE ft.is_active = true
+		WHERE ft.is_active = true OR ft.canonical_fish_type_id IS NOT NULL
 		GROUP BY COALESCE(ft.is_sorted, false)`)
 	if err != nil {
 		return 0, 0, err
