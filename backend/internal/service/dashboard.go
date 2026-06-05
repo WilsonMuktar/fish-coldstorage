@@ -26,15 +26,11 @@ func (s *DashboardService) GetStats(ctx context.Context) (*domain.DashboardStats
 		return nil, err
 	}
 
-	var totalKg float64
-	for _, st := range stocks {
-		totalKg += st.TotalQuantity
-	}
-
 	rawKg, sortedKg, err := s.fishRepo.StockTotals(ctx)
 	if err != nil {
 		rawKg, sortedKg = 0, 0
 	}
+	totalKg := rawKg + sortedKg
 
 	pendingCount, err := s.receiptRepo.CountByStatus(ctx, string(domain.ReceiptPending))
 	if err != nil {

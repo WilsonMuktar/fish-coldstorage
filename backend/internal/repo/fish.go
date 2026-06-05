@@ -291,7 +291,7 @@ func (r *FishRepo) StockTotals(ctx context.Context) (rawKg, sortedKg float64, er
 		SELECT COALESCE(ft.is_sorted, false), COALESCE(SUM(fs.quantity), 0)
 		FROM fish_types ft
 		LEFT JOIN fish_stock fs ON fs.fish_type_id = ft.id
-		WHERE ft.is_active = true OR ft.canonical_fish_type_id IS NOT NULL
+		WHERE ft.is_active = true OR ft.canonical_fish_type_id IS NOT NULL OR ft.is_sorted = true
 		GROUP BY COALESCE(ft.is_sorted, false)`)
 	if err != nil {
 		return 0, 0, err
