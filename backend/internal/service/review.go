@@ -565,9 +565,12 @@ func (s *ReviewService) processSortir(ctx context.Context, rec *domain.Receipt, 
 			continue
 		}
 
-		// Ensure sorted fish type exists — create if not
+		// Ensure sorted fish type exists — create if not.
+		// GetTypeByCode may return a raw (is_sorted=false) row if the code matches
+		// a text alias on a raw type. In that case treat it as not found and create
+		// a proper dedicated sorted row so is_sorted classification stays correct.
 		sortedFishType, err := s.fishRepo.GetTypeByCode(ctx, col.SortedFishCode)
-		if err != nil {
+		if err != nil || !sortedFishType.IsSorted {
 			// Look up the source fish type for the FK (alias-aware)
 			srcFishType, srcErr := s.fishRepo.GetTypeByCodeOrAlias(ctx, col.SourceFishCode)
 			var srcID *uuid.UUID

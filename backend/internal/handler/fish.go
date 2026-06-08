@@ -118,6 +118,21 @@ func (h *FishHandler) UpdateCanonical(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "cannot be its own canonical")
 			return
 		}
+		// Prevent mixing is_sorted and non-is_sorted types as aliases
+		alias, err := h.repo.GetTypeByID(r.Context(), id)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "alias fish type not found")
+			return
+		}
+		canon, err := h.repo.GetTypeByID(r.Context(), parsed)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "canonical fish type not found")
+			return
+		}
+		if alias.IsSorted != canon.IsSorted {
+			writeError(w, http.StatusBadRequest, "cannot alias sortir and non-sortir fish types together")
+			return
+		}
 		canonID = &parsed
 	}
 	if err := h.repo.UpdateCanonical(r.Context(), id, canonID); err != nil {
