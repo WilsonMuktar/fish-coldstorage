@@ -566,10 +566,16 @@ func (s *ReviewService) processSortir(ctx context.Context, rec *domain.Receipt, 
 		}
 
 		// Ensure sorted fish type exists — create if not.
-		// GetTypeByCode may return a raw (is_sorted=false) row if the code matches
-		// a text alias on a raw type. In that case treat it as not found and create
-		// a proper dedicated sorted row so is_sorted classification stays correct.
+		// If the code resolves to a raw (is_sorted=false) type, we must not reuse
+		// that row. Instead auto-suffix the code with "-SORTIR" so the sorted
+		// variant gets its own dedicated row with is_sorted=true.
+		sortedCode := col.SortedFishCode
 		sortedFishType, err := s.fishRepo.GetTypeByCode(ctx, col.SortedFishCode)
+		if err == nil && !sortedFishType.IsSorted {
+			// Code exists but belongs to a raw type — use suffixed code
+			sortedCode = col.SortedFishCode + "-SORTIR"
+			sortedFishType, err = s.fishRepo.GetTypeByCode(ctx, sortedCode)
+		}
 		if err != nil || !sortedFishType.IsSorted {
 			// Look up the source fish type for the FK (alias-aware)
 			srcFishType, srcErr := s.fishRepo.GetTypeByCodeOrAlias(ctx, col.SourceFishCode)
@@ -583,15 +589,15 @@ func (s *ReviewService) processSortir(ctx context.Context, rec *domain.Receipt, 
 			}
 			sortedFishType, err = s.fishRepo.CreateType(
 				ctx,
-				col.SortedFishCode,
-				col.SortedFishCode,
+				sortedCode,
+				sortedCode,
 				fmt.Sprintf("Auto-created from sortir: %s %s %s", col.SourceFishCode, col.Category, col.Grade),
 				true,
 				srcID,
 				gradeLabel,
 			)
 			if err != nil {
-				return fmt.Errorf("buat jenis ikan sortir %s: %w", col.SortedFishCode, err)
+				return fmt.Errorf("buat jenis ikan sortir %s: %w", sortedCode, err)
 			}
 		}
 

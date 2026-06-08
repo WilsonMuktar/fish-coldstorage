@@ -121,13 +121,18 @@ func (r *FishRepo) CreateType(ctx context.Context, code, name, desc string, isSo
 		IsActive: true, IsSorted: isSorted, SourceFishTypeID: sourceFishTypeID, Grade: grade,
 		CreatedAt: time.Now(),
 	}
-	_, err := r.db.Exec(ctx,
+	tag, err := r.db.Exec(ctx,
 		`INSERT INTO fish_types(id,code,name,description,is_active,is_sorted,source_fish_type_id,grade)
 		 VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 		 ON CONFLICT (code) DO NOTHING`,
 		f.ID, f.Code, f.Name, f.Description, f.IsActive, f.IsSorted, f.SourceFishTypeID, f.Grade)
 	if err != nil {
 		return nil, err
+	}
+	// If the row already existed (conflict), fetch the real row so the caller
+	// gets the correct persisted ID — not the throwaway UUID we generated above.
+	if tag.RowsAffected() == 0 {
+		return r.GetTypeByCode(ctx, code)
 	}
 	return &f, nil
 }
