@@ -132,7 +132,7 @@ export default function BonPage() {
                       {TYPE_LABELS[r.receipt_type] || r.receipt_type}
                     </td>
                     <td className="px-4 py-3 text-xs">
-                      {r.extracted_data?.timbangan?.date || r.extracted_data?.sortir?.date || r.extracted_data?.receipt?.date || '—'}
+                      {r.extracted_data?.timbangan?.date || r.extracted_data?.sortir?.date || r.extracted_data?.receipt?.date || r.extracted_data?.beli_ikan?.date || '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground capitalize">
                       {r.submitted_via || 'telegram'}

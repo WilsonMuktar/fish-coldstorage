@@ -248,7 +248,7 @@ export interface LendingRecord {
 
 export interface Receipt {
   id: string
-  receipt_type: 'bon_penjualan' | 'bon_pengeluaran' | 'timbangan_ikan_basah' | 'invoice'
+  receipt_type: 'bon_penjualan' | 'bon_pengeluaran' | 'timbangan_ikan_basah' | 'timbangan_sortir' | 'beli_ikan' | 'beli_item' | 'bayar_jasa' | 'invoice'
   image_path: string
   status: 'pending' | 'reviewing' | 'approved' | 'rejected'
   submitted_via: string
@@ -285,6 +285,26 @@ export interface ExtractedData {
   sortir?: {
     date?: string
     vessel_name?: string
+    transports?: string
+    columns?: Array<{
+      source_fish_code: string
+      category?: string
+      grade: string
+      sorted_fish_code: string
+      total_weight: number
+    }>
+    total_weight?: number
+  }
+  beli_ikan?: {
+    date?: string
+    vessel_name?: string
+    notes?: string
+    timbangan_ids?: string[]
+    items?: Array<{
+      fish_code?: string
+      quantity_kg?: number
+      price_per_kg?: number
+    }>
   }
   invoice?: {
     invoice_number?: string
