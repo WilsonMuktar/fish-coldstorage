@@ -45,7 +45,7 @@ function ProfitBadge({ value, pct }: { value: number; pct?: number }) {
 }
 
 export function ProfitLossWidget() {
-  const [period, setPeriod] = useState<Period>('month')
+  const [period, setPeriod] = useState<Period>('all')
   const [data, setData] = useState<ProfitLossStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
