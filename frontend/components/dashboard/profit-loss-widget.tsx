@@ -8,11 +8,12 @@ import { TrendingUp, TrendingDown, ShoppingCart, Receipt, AlertTriangle } from '
 import { cn } from '@/lib/utils'
 import { formatIDR } from '@/lib/formatters'
 
-type Period = 'today' | 'week' | 'month' | 'all'
+type Period = 'today' | 'week' | 'month' | 'last_month' | 'all'
 
 const periods: { key: Period; label: string }[] = [
   { key: 'today', label: 'Hari Ini' },
   { key: 'week', label: 'Minggu Ini' },
+  { key: 'last_month', label: 'Bulan Lalu' },
   { key: 'month', label: 'Bulan Ini' },
   { key: 'all', label: 'Semua' },
 ]
