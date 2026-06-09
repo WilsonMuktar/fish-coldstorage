@@ -294,9 +294,8 @@ func (r *FishRepo) UpdateCanonical(ctx context.Context, id uuid.UUID, canonicalI
 func (r *FishRepo) StockTotals(ctx context.Context) (rawKg, sortedKg float64, err error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT COALESCE(ft.is_sorted, false), COALESCE(SUM(fs.quantity), 0)
-		FROM fish_types ft
-		LEFT JOIN fish_stock fs ON fs.fish_type_id = ft.id
-		WHERE ft.is_active = true OR ft.canonical_fish_type_id IS NOT NULL OR ft.is_sorted = true
+		FROM fish_stock fs
+		JOIN fish_types ft ON ft.id = fs.fish_type_id
 		GROUP BY COALESCE(ft.is_sorted, false)`)
 	if err != nil {
 		return 0, 0, err
