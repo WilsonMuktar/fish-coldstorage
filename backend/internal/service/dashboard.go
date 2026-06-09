@@ -79,11 +79,6 @@ func (s *DashboardService) GetProfitLoss(ctx context.Context, period string) (*d
 		// current calendar month: 1st of this month → now
 		t := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 		from = &t
-	case "last_month":
-		// previous calendar month: 1st → last day
-		first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-		prevFirst := first.AddDate(0, -1, 0)
-		from, to = &prevFirst, &first
 	}
 	stats, err := s.beliIkanRepo.GetProfitLoss(ctx, from, to)
 	if err != nil {
